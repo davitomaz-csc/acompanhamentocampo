@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#0f3b5f"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="RS Campo">
-<title>Rota Studio Campo</title>
+<meta name="theme-color" content="#0f3b5f"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Estúdio Campo">
+<title>Estúdio de Rotas Campo · by Davi</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <style>
 :root{--b:#0f3b5f;--a:#0e7490;--ok:#15803d;--warn:#b45309;--bad:#b91c1c;--ink:#17212c;--mut:#5f6f80;--line:#e2e7ee;--soft:#f3f6f9;--ida:#2563eb;--volta:#14b8a6;color-scheme:light}
@@ -78,7 +78,7 @@ details.help{background:#eef6fb;border-radius:12px;padding:8px 12px;margin:8px 0
 .mot{display:grid;gap:6px}.mot label{display:flex;gap:10px;align-items:center;border:1.5px solid var(--line);border-radius:12px;padding:11px 12px;font-weight:600;font-size:14.5px}.mot input{width:22px;height:22px}.mot label.on{border-color:var(--bad);background:#fdecec}
 @media(min-width:900px){#sheet{top:52px;bottom:0;right:auto;width:420px;max-height:none!important;border-radius:0;overflow:auto}#map{left:420px}.grab{display:none}.toast{left:calc(50% + 210px)}.hud,.banner{left:420px}.runbar{left:auto;width:420px;right:0}}
 </style></head><body>
-<header><button id="btnBack" hidden aria-label="Voltar">←</button><h1 id="hTitle">Rota Studio Campo</h1><button onclick="document.getElementById('file').click()" title="Abrir pacote" aria-label="Abrir pacote">📂</button></header>
+<header><button id="btnBack" hidden aria-label="Voltar">←</button><h1 id="hTitle">Estúdio de Rotas Campo</h1><button onclick="document.getElementById('file').click()" title="Abrir pacote" aria-label="Abrir pacote">📂</button></header>
 <div id="map"></div>
 <button id="btnLayer" class="layerbtn">🛰 Satélite</button><button id="btnGps" class="gpsbtn">📍 GPS</button>
 <div id="hud" class="hud" hidden aria-live="polite"></div><div id="banner" class="banner" hidden></div>
@@ -89,13 +89,13 @@ details.help{background:#eef6fb;border-radius:12px;padding:8px 12px;margin:8px 0
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
 'use strict';
-/* ===================== Rota Studio Campo 2.0 — acompanhamento de linha e vistoria de pontos no celular =====================
- Abre o “pacote de campo” gerado no Rota Studio (computador): rotas, pontos, horários e quantidade de passageiros — sem nomes.
+/* ===================== Estúdio de Rotas Campo 2.0 — acompanhamento de linha e vistoria de pontos no celular =====================
+ Abre o “pacote de campo” gerado no Estúdio de Rotas (computador): rotas, pontos, horários e quantidade de passageiros — sem nomes.
  Acompanhamento (2.0): Modo A (no ônibus com o motorista: cabeçalho + checklist do “Controle de acompanhamento de linha”) ou
  Modo B (acompanhamento individual de carro ou ônibus). GPS contínuo, paradas com raio de tolerância, embarques/desembarques,
  fechamento com métricas e arquivo para importar no computador. Vistoria de pontos: checklist, fotos e posição pelo GPS.
  Tudo fica guardado no próprio celular até ser enviado. */
-const APP='Rota Studio Campo 2.3';
+const APP='Estúdio de Rotas Campo 2.3.1 · by Davi';
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const uid=(p='i')=>p+Date.now().toString(36).slice(-6)+Math.random().toString(36).slice(2,6);
@@ -116,14 +116,14 @@ let ME='';            // nome do vistoriador
 let MAT='';           // matrícula de quem está em campo
 let AC=null;          // acompanhamento em andamento
 let HIST=[];          // acompanhamentos encerrados (fotos à parte: 'ph:<id>')
-let CONN=null;        // conexão com o Rota Studio: {url do Apps Script, chave, at = última base baixada}
+let CONN=null;        // conexão com o Estúdio de Rotas: {url do Apps Script, chave, at = última base baixada}
 let FILA=[];          // envios esperando internet: {nome,dados,ref}
 let VIEW={v:'home'};  // tela atual
 let GPS=null,GPSW=null,GPS_ON=false;
 const DEF_CHECKS=[['luz','Iluminação adequada'],['calcada','Calçada / área de espera segura'],['parada','Espaço para o ônibus parar sem bloquear a via'],['visao','Boa visibilidade (longe de curva, lombada e esquina)'],['travessia','Passageiro não precisa atravessar via perigosa'],['abrigo','Abrigo / proteção contra sol e chuva'],['acess','Acessível (rampa, piso regular)']];
 const RESULTS={aprovado:['Aprovado','ok'],ressalva:['Aprovado com ressalva','warn'],reprovado:['Reprovado','bad']};
 const ST_TXT={validado:['Validado','ok'],proposto:['A vistoriar','warn'],reprovado:['Reprovado','bad'],casa:['Endereço (porta a porta)',''],inativo:['Inativo','']};
-/* configuração do acompanhamento: vem do pacote (Rota Studio → Acompanhamentos); sem ela, estes padrões */
+/* configuração do acompanhamento: vem do pacote (Estúdio de Rotas → Acompanhamentos); sem ela, estes padrões */
 const AC_DEF={tol:50,offRoute:150,motivos:['Ponto de embarque incorreto','Motorista parou fora do ponto programado','Novo ponto solicitado / não cadastrado','Desvio por obra / trânsito','Parada de emergência / segurança']};
 /* checklist do formulário “Controle de acompanhamento de linha” (PDF). ok = respostas conformes */
 const CK=[
@@ -186,14 +186,14 @@ function render(){const sh=$('sheet');sh.classList.remove('min');const v=VIEW.v;
 /* início: as duas tarefas de campo */
 function homeView(){setHead(APP,ME?ME+(MAT?' · mat. '+MAT:''):'Acompanhamento de linha e vistoria de pontos');if(MAP){LAY.clearLayers();TRAIL.clearLayers();}const n=pendingExport(),hp=HIST.filter(a=>!a.sent).length;
  let h=`<div class="grab" onclick="sheetSize()"></div>`;
- h+=CONN?`<div class="note ok">☁ <b>Conectado ao Rota Studio</b>${CONN.at?' · base de '+new Date(CONN.at).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):' · base ainda não baixada'}${FILA.length?' · <b>'+FILA.length+' envio(s) na fila</b>':''}<div class="btns" style="margin:6px 0 0"><button class="sm" onclick="campoSync(true)">↻ Atualizar agora</button><button class="sm" onclick="campoConnect()">Trocar conexão</button></div></div>`:`<button class="big" onclick="campoConnect()"><span class="ic">☁</span><span><b>Conectar ao Rota Studio</b><small>Cole o código de conexão (Rota Studio → Acompanhamentos). A base chega sozinha e os resultados vão direto para o computador, sem exportar arquivo.</small></span></button>`;
- if(!PKGS.length)h+=`<h2>Comece pelo pacote de campo</h2><p class="small mut">No computador, no Rota Studio: <b>Base ativa → Pontos</b> → <b>📱 Pacote de vistoria</b> (ou Planejamento → Exportar). Marque as linhas que vai acompanhar, envie o arquivo para este celular (WhatsApp, e-mail ou cabo) e abra aqui.</p><div class="drop" onclick="$('file').click()"><b style="font-size:16px">📂 Abrir pacote (.json)</b><br><span class="small">toque para escolher o arquivo</span></div>`;
+ h+=CONN?`<div class="note ok">☁ <b>Conectado ao Estúdio de Rotas</b>${CONN.at?' · base de '+new Date(CONN.at).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):' · base ainda não baixada'}${FILA.length?' · <b>'+FILA.length+' envio(s) na fila</b>':''}<div class="btns" style="margin:6px 0 0"><button class="sm" onclick="campoSync(true)">↻ Atualizar agora</button><button class="sm" onclick="campoConnect()">Trocar conexão</button></div></div>`:`<button class="big" onclick="campoConnect()"><span class="ic">☁</span><span><b>Conectar ao Estúdio de Rotas</b><small>Cole o código de conexão (Estúdio de Rotas → Acompanhamentos). A base chega sozinha e os resultados vão direto para o computador, sem exportar arquivo.</small></span></button>`;
+ if(!PKGS.length)h+=`<h2>Comece pelo pacote de campo</h2><p class="small mut">No computador, no Estúdio de Rotas: <b>Base ativa → Pontos</b> → <b>📱 Pacote de vistoria</b> (ou Planejamento → Exportar). Marque as linhas que vai acompanhar, envie o arquivo para este celular (WhatsApp, e-mail ou cabo) e abra aqui.</p><div class="drop" onclick="$('file').click()"><b style="font-size:16px">📂 Abrir pacote (.json)</b><br><span class="small">toque para escolher o arquivo</span></div>`;
  else{if(AC&&AC.status==='run')h+=`<button class="big on" onclick="go({v:'acRun'})"><span class="ic">▶️</span><span><b>Continuar acompanhamento</b><small>${esc(AC.head.linha)} · ${esc(AC.head.sentido)} · ${AC.stops.length} parada(s) registrada(s)</small></span></button>`;
   else h+=`<button class="big" onclick="acStart()"><span class="ic">🚌</span><span><b>Acompanhar uma viagem</b><small>Siga a linha pelo GPS, registre as paradas, os embarques e desembarques e o checklist.</small></span></button>`;
   h+=`<button class="big" onclick="go({v:'vist'})"><span class="ic">📍</span><span><b>Vistoriar pontos</b><small>Checklist do ponto, fotos e posição pelo GPS${n?' · <b style="color:var(--warn)">'+n+' vistoria(s) a enviar</b>':''}.</small></span></button>`;
   if(HIST.length){h+=`<h3>Acompanhamentos feitos neste celular</h3>`+HIST.slice(0,15).map((a,i)=>{const m=acMetrics(a);return `<div class="card" onclick="go({v:'acEnd',h:${i}})"><span class="num ${a.sent?'feito':''}">${a.mode==='A'?'A':'B'}</span><div class="grow" style="min-width:0"><b>${esc(a.head.linha)} · ${esc(a.head.sentido)}</b><small>${esc(fdt(a.head.data))} ${esc(a.head.hIni||'')}–${esc(a.head.hFim||'')} · ${m.nStops} parada(s) · ${m.out?'<b style="color:var(--bad)">'+m.out+' fora do ponto</b>':'todas no ponto'}</small></div><span class="chip ${a.sent?'ok':'warn'}">${a.sent?'enviado':'a enviar'}</span></div>`;}).join('');}
   h+=`<div class="btns"><button onclick="$('file').click()">📂 Abrir outro pacote</button><button onclick="setMe()">👤 ${ME?'Trocar nome':'Seu nome'}</button></div>`;}
- if(!window.isSecureContext)h+=`<div class="note bad"><b>⚠ GPS bloqueado neste modo de abertura.</b> O app foi aberto pelo Google Drive ou como arquivo, e o celular só libera o GPS para endereços <b>https</b>. Abra o Rota Studio Campo pelo link https e use “Adicionar à tela inicial”. A vistoria e o envio funcionam assim mesmo.</div>`;
+ if(!window.isSecureContext)h+=`<div class="note bad"><b>⚠ GPS bloqueado neste modo de abertura.</b> O app foi aberto pelo Google Drive ou como arquivo, e o celular só libera o GPS para endereços <b>https</b>. Abra o Estúdio de Rotas Campo pelo link https e use “Adicionar à tela inicial”. A vistoria e o envio funcionam assim mesmo.</div>`;
  if(DB.mode!=='idb')h+=`<div class="note warn">${DB.mode==='ls'?'Este navegador guarda pouco espaço: envie os resultados com frequência.':'Este navegador não deixou guardar dados: <b>envie o resultado antes de fechar</b>, ou abra este arquivo pelo Chrome.'}</div>`;
  h+=`<p class="small mut" style="margin-top:14px">${APP}. Os pacotes não têm nomes nem endereços de passageiros. Tudo fica neste celular até você enviar${hp?' · '+hp+' acompanhamento(s) a enviar':''}.</p>`;$('sheet').innerHTML=h;}
 const fdt=d=>d?new Date(d+'T12:00').toLocaleDateString('pt-BR'):'';
@@ -257,12 +257,12 @@ function sendView(){setHead('Enviar vistorias',ME||'');const items=Object.values
  $('sheet').innerHTML=`<div class="grab" onclick="sheetSize()"></div><h2>Enviar vistorias</h2><p class="small">${items.length} vistoria(s) neste celular · <b>${pend.length} ainda não enviada(s)</b>.</p>
  ${!ME||!MAT?`<div class="note warn">Informe seu nome e matrícula antes de enviar: <a href="#" onclick="setMe();return false">definir</a>.</div>`:''}
  <label class="row small" style="gap:10px;margin:8px 0"><input type="checkbox" id="sAll" style="width:22px;height:22px"> <span>Incluir também as já enviadas</span></label>
- <div class="btns one">${CONN?'<button class="ok" onclick="doSend(\'cloud\')">☁ Enviar direto ao Rota Studio</button>':''}<button class="p" onclick="doSend(true)">📤 Compartilhar (WhatsApp, e-mail…)</button><button onclick="doSend(false)">⬇ Salvar arquivo no celular</button></div>
- <p class="small mut">No computador, no Rota Studio: <b>Importar</b> e escolha este arquivo. As fotos vão junto (reduzidas).</p>`;}
+ <div class="btns one">${CONN?'<button class="ok" onclick="doSend(\'cloud\')">☁ Enviar direto ao Estúdio de Rotas</button>':''}<button class="p" onclick="doSend(true)">📤 Compartilhar (WhatsApp, e-mail…)</button><button onclick="doSend(false)">⬇ Salvar arquivo no celular</button></div>
+ <p class="small mut">No computador, no Estúdio de Rotas: <b>Importar</b> e escolha este arquivo. As fotos vão junto (reduzidas).</p>`;}
 async function doSend(share){const all=$('sAll')?.checked;const list=Object.values(RES).filter(x=>all||!x.sent);if(!list.length){toast('Nenhuma vistoria para enviar.','warn');return;}
  const items=[];for(const x of list){const photos=[];for(const id of x.photos||[]){const d=await DB.get('ph:'+id);if(d)photos.push(d);}items.push({...x,photos});}
  const data={kind:'rota-studio-vistorias',v:1,app:APP,made:new Date().toISOString(),by:ME||'campo',items};const name='Vistorias_'+(ME||'campo').replace(/[^\wÀ-ú]+/g,'_')+'_'+new Date().toISOString().slice(0,16).replace(/[:T]/g,'-')+'.json';
- if(share==='cloud'){await enviar(name,data,{vist:list.map(x=>x.key)});toast(FILA.length?'Sem conexão agora: as vistorias ficaram na fila e vão sozinhas quando houver internet.':'Vistorias entregues ao Rota Studio.',FILA.length?'warn':'ok',7000);go({v:'vist'});return;}
+ if(share==='cloud'){await enviar(name,data,{vist:list.map(x=>x.key)});toast(FILA.length?'Sem conexão agora: as vistorias ficaram na fila e vão sozinhas quando houver internet.':'Vistorias entregues ao Estúdio de Rotas.',FILA.length?'warn':'ok',7000);go({v:'vist'});return;}
  if(!await shareFile(data,name,share,'Vistorias de pontos',items.length+' vistoria(s) — '+(ME||'campo')))return;
  for(const x of list)RES[x.key].sent=new Date().toISOString();await saveAll();toast(items.length+' vistoria(s) prontas para o computador.','ok');go({v:'vist'});}
 /* compartilha o arquivo (WhatsApp, e-mail…) ou salva em Downloads; devolve false se a pessoa cancelou */
@@ -270,9 +270,9 @@ async function shareFile(data,name,share,title,text){const blob=new Blob([JSON.s
  if(share&&navigator.canShare){try{const f=new File([blob],name,{type:'application/json'});if(navigator.canShare({files:[f]})){await navigator.share({files:[f],title,text});return true;}}catch(e){if(e.name==='AbortError')return false;}}
  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.append(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},2000);if(share)toast('Este celular não compartilha arquivos direto: o arquivo foi salvo em Downloads. Envie pelo WhatsApp a partir de lá.','',8000);return true;}
 /* ---------- abrir pacote ---------- */
-async function openFile(f){if(!f)return;let d;try{d=JSON.parse(await f.text());}catch{toast('Arquivo inválido (não é um pacote do Rota Studio).','bad');return;}
- if(d?.kind==='rota-studio-vistorias'||d?.kind==='rota-studio-acomp'){toast('Este é um arquivo de resultado — importe no computador, no Rota Studio.','warn',7000);return;}
- if(d?.kind!=='rota-studio-campo'||!Array.isArray(d.routes)){toast('Este arquivo não é um pacote de campo do Rota Studio.','bad');return;}
+async function openFile(f){if(!f)return;let d;try{d=JSON.parse(await f.text());}catch{toast('Arquivo inválido (não é um pacote do Estúdio de Rotas).','bad');return;}
+ if(d?.kind==='rota-studio-vistorias'||d?.kind==='rota-studio-acomp'){toast('Este é um arquivo de resultado — importe no computador, no Estúdio de Rotas.','warn',7000);return;}
+ if(d?.kind!=='rota-studio-campo'||!Array.isArray(d.routes)){toast('Este arquivo não é um pacote de campo do Estúdio de Rotas.','bad');return;}
  const pk=await loadPkg(d);toast('Pacote aberto: '+pk.routes.length+' rota(s), '+(d.count||0)+' ponto(s) a vistoriar.','ok');go({v:'home'});}
 async function loadPkg(d){const id=d.auto?'auto':'pk'+(d.made||'')+(d.title||'');const old=PKGS.findIndex(p=>p.id===id);const pk={id,title:d.title,made:d.made,by:d.by,routes:d.routes,points:d.points||[],checks:Array.isArray(d.checks)&&d.checks.length?d.checks:DEF_CHECKS,acomp:{...AC_DEF,...(d.acomp||{})}};
  if(old>=0)PKGS[old]=pk;else PKGS.unshift(pk);if(!ME&&d.by&&!d.auto)ME=d.by;await saveAll();return pk;}
@@ -287,7 +287,7 @@ const minOf=t=>{const m=/(\d{1,2}):(\d{2})/.exec(t||'');return m?+m[1]*60+ +m[2]
 const acRoute=a=>routeOf(pkgOf(a.route.pk),a.route.id);
 /* 2.3: ao responder, a tela desce sozinha até o próximo item sem resposta */
 const nextTo=sel=>setTimeout(()=>{const el=typeof sel==='string'?document.querySelector(sel):sel;el?.scrollIntoView({behavior:'smooth',block:'center'});},180);
-const GPS_BLOCK='GPS bloqueado: o app foi aberto pelo Google Drive ou como arquivo, e o celular só libera o GPS para endereços https. Abra o Rota Studio Campo pelo link https (peça ao responsável) e adicione à tela inicial.';
+const GPS_BLOCK='GPS bloqueado: o app foi aberto pelo Google Drive ou como arquivo, e o celular só libera o GPS para endereços https. Abra o Estúdio de Rotas Campo pelo link https (peça ao responsável) e adicione à tela inicial.';
 let DRAFT=null,LINE=[],WAKE=null,LASTSAVE=0;
 function acStart(){if(AC&&AC.status==='run')return go({v:'acRun'});if(!PKGS.some(p=>p.routes.length)){toast('O pacote aberto não tem linhas. Gere o pacote no computador marcando as linhas.','warn',7000);return;}DRAFT={step:1,mode:'',rk:''};go({v:'acNew'});}
 /* passo 1: linha e modo */
@@ -399,7 +399,7 @@ async function acAsk(x){const i=VIEW.h,a=HIST[i];if(!a)return go({v:'home'});
  if(x==='sim'){go({...VIEW,ask:0});if(CONN)await acCloud(i);else await acExport(i,true);return;}
  if(x==='nao')return go({...VIEW,ask:2});
  if(x==='excluir'){for(const s of a.stops)if(s.photo)await DB.del('ph:'+s.photo);HIST.splice(i,1);FILA=FILA.filter(f=>f.ref?.ac!==a.id);await saveAll();toast('Acompanhamento excluído deste celular.','ok');go({v:'home'});}}
-/* envia o acompanhamento direto ao Rota Studio (sem internet, fica na fila) */
+/* envia o acompanhamento direto ao Estúdio de Rotas (sem internet, fica na fila) */
 async function acCloud(i){const a=HIST[i];if(!a||!CONN)return;const{data,name}=await acData(a);a.queued=true;await enviar(name,data,{ac:a.id});if(VIEW.v==='acEnd')render();}
 function acMetrics(a){const r=routeOf(pkgOf(a.route.pk),a.route.id),nProg=r?.stops.length||a.nProg||0;let emb=0,des=0,peak=0,b=0;for(const s of a.stops){emb+=+s.emb||0;des+=+s.des||0;b=Math.max(0,b+(+s.emb||0)-(+s.des||0));peak=Math.max(peak,b);}
  const inT=a.stops.filter(s=>s.inTol).length,att=new Set(a.stops.filter(s=>s.inTol&&s.match).map(s=>s.match.i)).size,tm=a.stops.filter(s=>s.inTol&&s.prog).map(s=>{let d=minOf(s.real)-minOf(s.prog);if(d<-720)d+=1440;return d;});
@@ -408,7 +408,7 @@ function acMetrics(a){const r=routeOf(pkgOf(a.route.pk),a.route.id),nProg=r?.sto
  return{emb,des,peak,nStops:a.stops.length,inT,out:a.stops.filter(s=>!s.inTol&&!s.semGps).length,semGps:a.stops.filter(s=>s.semGps).length,nProg,att,miss:Math.max(0,nProg-att),tmN:tm.length,onTime,avg,dur:a.endAt?Date.parse(a.endAt)-Date.parse(a.startAt):0,ckN,ckOkN,ckBad,off:a.off.length,motivos:a.stops.filter(s=>s.motivo).reduce((m,s)=>{const k=s.motivo==='Outros'?'Outros: '+s.motivoTxt:s.motivo;m[k]=(m[k]||0)+1;return m;},{})};}
 function acEndView(){const a=HIST[VIEW.h];if(!a)return go({v:'home'});const m=acMetrics(a);setHead('Fechamento da viagem',a.head.linha+' · '+a.head.sentido);$('sheet').classList.add('full');
  if(MAP){const pk=pkgOf(a.route.pk),r=routeOf(pk,a.route.id);if(r)drawRoute(pk,r);const AC0=AC;AC=a;drawStopsAc();drawTrail();AC=AC0;}
- const pct=(x,n)=>n?Math.round(x/n*100)+'%':'—',dest=CONN?'ao Rota Studio':'(arquivo para o computador)';
+ const pct=(x,n)=>n?Math.round(x/n*100)+'%':'—',dest=CONN?'ao Estúdio de Rotas':'(arquivo para o computador)';
  const ask=VIEW.ask===1?`<div class="note ok" style="font-size:15px"><b>Enviar este acompanhamento ${dest}?</b><div class="btns" style="margin-bottom:0"><button class="ok" onclick="acAsk('sim')">☁ Sim, enviar</button><button class="bad" onclick="acAsk('nao')">Não enviar</button></div></div>`
   :VIEW.ask===2?`<div class="note bad" style="font-size:15px"><b>Tem certeza?</b> Sem enviar, este acompanhamento será <b>excluído</b> deste celular e não poderá ser recuperado.<div class="btns" style="margin-bottom:0"><button class="ok" onclick="acAsk('sim')">☁ Enviar</button><button class="bad" onclick="acAsk('excluir')">Sim, excluir</button></div></div>`:'';
  $('sheet').innerHTML=`<div class="grab" onclick="sheetSize()"></div>${ask}<h2>${esc(a.head.linha)} · ${esc(a.head.sentido)}</h2><p class="small mut" style="margin-top:-4px">${esc(fdt(a.head.data))} · ${esc(a.head.hIni)}–${esc(a.head.hFim)} · ${a.mode==='A'?'Modo A (com o motorista)':'Modo B (individual, '+esc(a.head.veic)+')'} · ${esc(a.head.acomp)} (mat. ${esc(a.head.matAcomp)})</p>
@@ -420,8 +420,8 @@ function acEndView(){const a=HIST[VIEW.h];if(!a)return go({v:'home'});const m=ac
  ${a.ckSkip?`<div class="note warn"><b>Checklist dispensado:</b> ${esc(a.ckSkip.why)}</div>`:m.ckBad.length?`<div class="note bad"><b>Não conforme:</b> ${m.ckBad.map(esc).join(' · ')}</div>`:''}
  ${Object.keys(m.motivos).length?`<h3>Motivos das paradas fora do ponto</h3>${Object.entries(m.motivos).map(([k,n])=>`<div class="small">• ${esc(k)} <b>(${n})</b></div>`).join('')}`:''}
  <h3>Paradas</h3>${a.stops.map((s,i)=>`<div class="card" style="cursor:default"><span class="num" style="background:${s.inTol?'var(--ok)':s.semGps?'#64748b':'var(--bad)'}">${i+1}</span><div class="grow" style="min-width:0"><b>${s.inTol?'Nº '+esc(s.match.n)+' · '+esc(s.match.name):s.semGps?'Sem GPS':'Fora do ponto'+(s.match?' (a '+fmtM(s.match.d)+' do Nº '+esc(s.match.n)+')':'')}</b><small>⬆ ${s.emb} · ⬇ ${s.des} · a bordo ${s.bordo}${s.motivo?' · '+esc(s.motivo==='Outros'?s.motivoTxt:s.motivo):''}${s.obs?' · '+esc(s.obs):''}${s.photo?' · 📷':''}</small></div><div class="tm">${esc(s.real)}${s.prog?'<br><small>prog. '+esc(s.prog)+'</small>':''}</div></div>`).join('')||'<p class="small mut">Nenhuma parada registrada.</p>'}
- <div class="btns one" style="margin-top:12px">${CONN?`<button class="ok" onclick="acCloud(${VIEW.h})" ${a.sent?'disabled':''}>${a.sent?'☁ Entregue ao Rota Studio':a.queued?'☁ Na fila — tentar enviar de novo':'☁ Enviar direto ao Rota Studio'}</button>`:''}<button class="p" onclick="acExport(${VIEW.h},true)">📤 Exportar / Compartilhar acompanhamento</button><button onclick="acExport(${VIEW.h},false)">⬇ Salvar arquivo no celular</button><button onclick="acWhats(${VIEW.h})">💬 Enviar resumo pelo WhatsApp</button><button onclick="go({v:'home'})">Concluir</button></div>
- <p class="small mut">No computador, no Rota Studio: <b>Importar</b> e escolha o arquivo — o acompanhamento entra com 1 clique.${a.sent?' Enviado em '+new Date(a.sent).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})+'.':''}</p>`;}
+ <div class="btns one" style="margin-top:12px">${CONN?`<button class="ok" onclick="acCloud(${VIEW.h})" ${a.sent?'disabled':''}>${a.sent?'☁ Entregue ao Estúdio de Rotas':a.queued?'☁ Na fila — tentar enviar de novo':'☁ Enviar direto ao Estúdio de Rotas'}</button>`:''}<button class="p" onclick="acExport(${VIEW.h},true)">📤 Exportar / Compartilhar acompanhamento</button><button onclick="acExport(${VIEW.h},false)">⬇ Salvar arquivo no celular</button><button onclick="acWhats(${VIEW.h})">💬 Enviar resumo pelo WhatsApp</button><button onclick="go({v:'home'})">Concluir</button></div>
+ <p class="small mut">No computador, no Estúdio de Rotas: <b>Importar</b> e escolha o arquivo — o acompanhamento entra com 1 clique.${a.sent?' Enviado em '+new Date(a.sent).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})+'.':''}</p>`;}
 /* resumo legível (WhatsApp/e-mail) */
 function acText(a){const m=acMetrics(a);return [`*Acompanhamento de linha* — ${a.head.linha} ${a.head.sentido}`,`${fdt(a.head.data)} · ${a.head.hIni}–${a.head.hFim} (${durTxt(m.dur)})`,a.mode==='A'?`Modo A · carro ${a.head.carro} · motorista ${a.head.motorista} (mat. ${a.head.matMot})`:`Modo B · individual (${a.head.veic})`,`Acompanhante: ${a.head.acomp} (mat. ${a.head.matAcomp})`,'',
  `Paradas: ${m.nStops} — ${m.inT} no ponto, ${m.out} fora do ponto${m.semGps?', '+m.semGps+' sem GPS':''}`,`Pontos programados atendidos: ${m.att} de ${m.nProg}`,`Embarques ${m.emb} · Desembarques ${m.des} · Pico a bordo ${m.peak}`,m.tmN?`Pontualidade: ${m.onTime} de ${m.tmN} no horário (±5 min)${m.avg!=null?' · média '+(m.avg>0?'+':'')+Math.round(m.avg)+' min':''}`:'',m.off?`Saídas do traçado planejado: ${m.off}`:'',
@@ -438,15 +438,15 @@ async function boot(){await DB.open();PKGS=(await DB.get('pkgs'))||[];RES=(await
  $('btnLayer').onclick=toggleTiles;$('btnGps').onclick=()=>gpsToggle();$('file').onchange=e=>{openFile(e.target.files[0]);e.target.value='';};
  window.addEventListener('beforeunload',e=>{if((pendingExport()||AC)&&DB.mode==='mem'){e.preventDefault();e.returnValue='';}});
  if(AC&&AC.status==='run'){go({v:'acRun'});toast('Acompanhamento em andamento retomado.','ok');}else render();if(CONN)campoSync(false);}
-/* ---------- conexão com o Rota Studio (Apps Script do link): a base chega sozinha e os resultados vão direto ---------- */
+/* ---------- conexão com o Estúdio de Rotas (Apps Script do link): a base chega sozinha e os resultados vão direto ---------- */
 const connUrl=q=>CONN.url+(CONN.url.includes('?')?'&':'?')+q;
-function campoConnect(){const c=prompt('Cole o código de conexão (computador: Rota Studio → Acompanhamentos → Sincronização com o celular → Copiar).\nDeixe em branco para desconectar.','');if(c===null)return;
- if(!c.trim()){CONN=null;saveAll();render();toast('Celular desconectado do Rota Studio.','ok');return;}
+function campoConnect(){const c=prompt('Cole o código de conexão (computador: Estúdio de Rotas → Acompanhamentos → Sincronização com o celular → Copiar).\nDeixe em branco para desconectar.','');if(c===null)return;
+ if(!c.trim()){CONN=null;saveAll();render();toast('Celular desconectado do Estúdio de Rotas.','ok');return;}
  let t=c.trim();if(/^RSC2-/.test(t)){try{const b=t.slice(5).replace(/\s+/g,'');t='RSC1|'+atob(b+'='.repeat((4-b.length%4)%4));}catch{t='';}}
- const m=/^RSC1\|(https:\/\/script\.google(?:usercontent)?\.com\/[^|\s]+)\|([0-9a-f]{16,64})$/i.exec(t);if(!m){toast('Código inválido: copie de novo no Rota Studio (Acompanhamentos → 📋 Copiar) e cole aqui, sem abrir como link.','bad',8000);return;}
+ const m=/^RSC1\|(https:\/\/script\.google(?:usercontent)?\.com\/[^|\s]+)\|([0-9a-f]{16,64})$/i.exec(t);if(!m){toast('Código inválido: copie de novo no Estúdio de Rotas (Acompanhamentos → 📋 Copiar) e cole aqui, sem abrir como link.','bad',8000);return;}
  CONN={url:m[1],key:m[2],at:''};saveAll();campoSync(true);}
 async function campoSync(manual){if(!CONN)return;if(!navigator.onLine){if(manual)toast('Sem internet agora: a base fica como está e os envios esperam na fila.','warn');return;}
- try{const r=await fetch(connUrl('campo=pacote&t='+encodeURIComponent(CONN.key)));const d=await r.json();if(d.ok===false)throw new Error(d.erro||'erro do Rota Studio');if(d.kind!=='rota-studio-campo'||!Array.isArray(d.routes))throw new Error('resposta inesperada');
+ try{const r=await fetch(connUrl('campo=pacote&t='+encodeURIComponent(CONN.key)));const d=await r.json();if(d.ok===false)throw new Error(d.erro||'erro do Estúdio de Rotas');if(d.kind!=='rota-studio-campo'||!Array.isArray(d.routes))throw new Error('resposta inesperada');
   await loadPkg({...d,auto:true});CONN.at=new Date().toISOString();await saveAll();if(manual)toast('Base atualizada: '+d.routes.length+' viagem(ns) vigente(s).','ok');if(['home','vist'].includes(VIEW.v))render();}
  catch(e){if(manual)toast('Não consegui buscar a base: '+e.message,'bad',8000);}await flush();}
 async function enviar(nome,dados,ref){FILA.push({nome,dados,ref:ref||null,at:new Date().toISOString()});await saveAll();return flush();}
@@ -454,8 +454,8 @@ let FLUSHING=false;
 async function flush(){if(!CONN||!FILA.length||FLUSHING||!navigator.onLine)return !FILA.length;FLUSHING=true;let ok=0;
  try{while(FILA.length){const it=FILA[0];const r=await fetch(CONN.url,{method:'POST',body:JSON.stringify({t:CONN.key,nome:it.nome,dados:it.dados})});const d=await r.json().catch(()=>({ok:false,erro:'resposta inválida'}));if(!d.ok)throw new Error(d.erro||'falhou');
   FILA.shift();ok++;const now=new Date().toISOString();if(it.ref?.ac){const h=HIST.find(x=>x.id===it.ref.ac);if(h)h.sent=now;}for(const k of it.ref?.vist||[])if(RES[k])RES[k].sent=now;await saveAll();}}
- catch(e){toast('Envio ao Rota Studio pendente ('+e.message+'). Tento de novo quando houver internet.','warn',7000);}finally{FLUSHING=false;}
- if(ok){toast(ok+' envio(s) entregue(s) ao Rota Studio.','ok');if(['home','acEnd','vist'].includes(VIEW.v))render();}return !FILA.length;}
+ catch(e){toast('Envio ao Estúdio de Rotas pendente ('+e.message+'). Tento de novo quando houver internet.','warn',7000);}finally{FLUSHING=false;}
+ if(ok){toast(ok+' envio(s) entregue(s) ao Estúdio de Rotas.','ok');if(['home','acEnd','vist'].includes(VIEW.v))render();}return !FILA.length;}
 window.addEventListener('online',()=>flush());
 document.addEventListener('DOMContentLoaded',boot);
 </script>
