@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f3b5f"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="RS Campo">
+<title>Rota Studio Campo</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+:root{--b:#0f3b5f;--a:#0e7490;--ok:#15803d;--warn:#b45309;--bad:#b91c1c;--ink:#17212c;--mut:#5f6f80;--line:#e2e7ee;--soft:#f3f6f9;--ida:#2563eb;--volta:#14b8a6;color-scheme:light}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}[hidden]{display:none!important}
+html,body{margin:0;height:100%;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--ink);background:#fff;overscroll-behavior:none}
+button,input,select,textarea{font:inherit}
+button{border:0;border-radius:12px;padding:12px 14px;font-weight:650;background:var(--soft);color:var(--b);cursor:pointer;min-height:44px}
+button.p{background:var(--a);color:#fff}button.ok{background:var(--ok);color:#fff}button.bad{background:#fdecec;color:var(--bad)}button.sm{min-height:34px;padding:7px 10px;font-size:13px;border-radius:10px}
+button:disabled{opacity:.5}button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible{outline:3px solid #f59e0b;outline-offset:2px}
+header{position:fixed;top:0;left:0;right:0;height:52px;z-index:1000;background:var(--b);color:#fff;display:flex;align-items:center;gap:8px;padding:0 10px;padding-top:env(safe-area-inset-top)}
+header h1{flex:1;font-size:15px;margin:0;line-height:1.15;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}header h1 small{display:block;font-weight:400;opacity:.75;font-size:11.5px}
+header button{background:#ffffff1f;color:#fff;min-height:36px;padding:6px 10px;font-size:13px}
+#map{position:fixed;top:52px;left:0;right:0;bottom:0}
+#sheet{position:fixed;left:0;right:0;bottom:0;z-index:999;background:#fff;border-radius:18px 18px 0 0;box-shadow:0 -6px 24px #0f2a4433;max-height:62vh;overflow:auto;padding:8px 14px calc(14px + env(safe-area-inset-bottom));transition:max-height .2s}
+#sheet.full{max-height:calc(100vh - 60px)}#sheet.min{max-height:96px;overflow:hidden}
+.grab{width:44px;height:5px;border-radius:3px;background:#cfd8e3;margin:2px auto 8px;cursor:pointer}
+h2{font-size:16px;margin:4px 0 8px}h3{font-size:12.5px;margin:14px 0 6px;color:var(--mut);text-transform:uppercase;letter-spacing:.4px}
+.mut{color:var(--mut)}.small{font-size:12.5px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.row>.grow{flex:1}
+.btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0}.btns.one{grid-template-columns:1fr}
+.card{border:1px solid var(--line);border-radius:14px;padding:10px 12px;margin:7px 0;display:flex;gap:10px;align-items:center;cursor:pointer;background:#fff}
+.card b{display:block;font-size:14px;line-height:1.25}.card small{display:block;color:var(--mut);font-size:12px;margin-top:2px}
+.card .tm{margin-left:auto;font-weight:700;color:var(--a);white-space:nowrap;text-align:right}
+.num{min-width:30px;height:30px;border-radius:50%;background:var(--b);color:#fff;display:grid;place-items:center;font-weight:700;font-size:13px;flex-shrink:0}
+.num.validado{background:var(--ok)}.num.proposto{background:#d97706}.num.reprovado{background:var(--bad)}.num.casa{background:#64748b}.num.feito{background:var(--a)}
+.chip{display:inline-block;font-size:11.5px;padding:2px 8px;border-radius:20px;background:var(--soft);border:1px solid var(--line);color:var(--mut);white-space:nowrap}
+.chip.ok{background:#e8f6ec;color:var(--ok);border-color:#b7e2c3}.chip.warn{background:#fff4e0;color:var(--warn);border-color:#f5d7a8}.chip.bad{background:#fdecec;color:var(--bad);border-color:#f3b9b9}.chip.info{background:#e0f2f5;color:var(--a);border-color:#b3dde5}
+.bar{height:8px;border-radius:5px;background:var(--soft);overflow:hidden;margin-top:6px}.bar i{display:block;height:100%;background:var(--ok)}
+.note{border-radius:12px;padding:10px 12px;font-size:13px;margin:8px 0;background:#e0f2f5;color:#0b4f5f}.note.warn{background:#fff4e0;color:#7a3f02}.note.bad{background:#fdecec;color:#7f1414}.note.ok{background:#e8f6ec;color:#0f5a2b}
+.chk{border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.ck{padding:10px 12px;border-bottom:1px solid var(--line)}.ck:last-child{border-bottom:0}.ck>span{display:block;font-size:13.5px;margin-bottom:6px}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;background:var(--soft);border-radius:10px;padding:3px}.seg.s2{grid-template-columns:1fr 1fr}.seg.sv{grid-template-columns:1fr}
+.seg label{position:relative}.seg input{position:absolute;opacity:0;pointer-events:none}.seg b{display:block;text-align:center;padding:10px 4px;border-radius:8px;font-size:13.5px;color:var(--mut)}
+.seg input:checked+b{background:#fff;color:var(--b);box-shadow:0 1px 3px #0f2a4433}.seg input[value=nao]:checked+b{color:var(--bad)}.seg input[value=ok]:checked+b{color:var(--ok)}
+.seg input:checked+b.g{background:#e8f6ec;color:var(--ok)}.seg input:checked+b.r{background:#fdecec;color:var(--bad)}
+.res{display:grid;grid-template-columns:1fr;gap:6px}.res label{display:flex;gap:10px;align-items:center;border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;font-weight:600}
+.res input{width:20px;height:20px}.res label.on.aprovado{border-color:var(--ok);background:#e8f6ec}.res label.on.ressalva{border-color:#d97706;background:#fff4e0}.res label.on.reprovado{border-color:var(--bad);background:#fdecec}
+textarea,input[type=text],input[type=search],input[type=date],input[type=time],input[type=number],select{width:100%;border:1px solid #c5cfda;border-radius:12px;padding:11px 12px;font-size:16px;background:#fff;color:var(--ink)}
+.photos{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}.photos div{position:relative}.photos img{width:84px;height:84px;object-fit:cover;border-radius:10px;border:1px solid var(--line)}
+.photos button{position:absolute;top:-6px;right:-6px;min-height:0;width:24px;height:24px;padding:0;border-radius:50%;background:var(--bad);color:#fff;font-size:13px}
+.addph{display:flex;align-items:center;justify-content:center;width:84px;height:84px;border:2px dashed #cbd5e1;border-radius:10px;color:var(--mut);font-size:26px;cursor:pointer}
+.mk{width:28px;height:28px;border-radius:50%;background:var(--b);color:#fff;border:2px solid #fff;box-shadow:0 1px 4px #0007;display:grid;place-items:center;font:700 12px system-ui}
+.mk.validado{background:var(--ok)}.mk.proposto{background:#d97706}.mk.reprovado{background:var(--bad)}.mk.casa{background:#64748b}.mk.feito{background:var(--a)}.mk.sel{transform:scale(1.25);box-shadow:0 0 0 4px #0e749055}.mk.out{background:var(--bad)}
+.me{width:18px;height:18px;border-radius:50%;background:#e11d48;border:3px solid #fff;box-shadow:0 0 0 6px #e11d4833}
+.arrow{width:34px;height:34px;display:grid;place-items:center}.arrow svg{width:34px;height:34px;filter:drop-shadow(0 1px 3px #0008)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);top:62px;z-index:3000;display:grid;gap:6px;width:min(94vw,460px)}
+.toast div{background:#17212c;color:#fff;border-radius:12px;padding:10px 12px;font-size:13.5px;box-shadow:0 6px 20px #0005}
+.toast div.warn{background:#7a3f02}.toast div.bad{background:#7f1414}.toast div.ok{background:#0f5a2b}
+.drop{border:2px dashed #b9c6d3;border-radius:16px;padding:22px 14px;text-align:center;color:var(--mut);margin:8px 0}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;font-size:13.5px;margin:6px 0}.kv span{color:var(--mut)}
+.layerbtn{position:fixed;right:10px;top:62px;z-index:900;min-height:38px;padding:6px 10px;font-size:12.5px;background:#fff;box-shadow:0 1px 5px #0003}
+.gpsbtn{position:fixed;right:10px;top:106px;z-index:900;min-height:38px;padding:6px 10px;font-size:12.5px;background:#fff;box-shadow:0 1px 5px #0003}
+.gpsbtn.on{background:var(--a);color:#fff}
+/* 2.0 — acompanhamento de linha */
+.big{display:flex;gap:14px;align-items:center;border:2px solid var(--line);border-radius:16px;padding:14px;margin:8px 0;background:#fff;cursor:pointer;text-align:left;width:100%;min-height:76px;color:var(--ink)}
+.big .ic{font-size:30px;line-height:1}.big b{display:block;font-size:16.5px}.big small{display:block;color:var(--mut);font-size:13px;font-weight:400;margin-top:2px}.big.on{border-color:var(--a);background:#e6f4f7}
+.f{margin:8px 0}.f>span{display:block;font-weight:650;font-size:14px;margin-bottom:4px}.f>span i{color:var(--bad);font-style:normal}.hint{display:block;font-size:12.5px;color:var(--mut);margin-top:3px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+details.help{background:#eef6fb;border-radius:12px;padding:8px 12px;margin:8px 0;font-size:13.5px}details.help summary{cursor:pointer;font-weight:650;color:var(--b)}details.help p{margin:6px 0}
+.cki{border:1px solid var(--line);border-radius:14px;padding:10px 12px;margin:7px 0}.cki>b{display:block;font-size:14.5px;margin-bottom:6px}.cki.bad{border-color:#f3b9b9;background:#fffafa}
+.hud{position:fixed;top:52px;left:0;right:0;z-index:950;background:#0b1d2e;color:#fff;padding:10px 14px;display:grid;grid-template-columns:1fr auto;gap:4px 12px;box-shadow:0 4px 14px #0006}
+.hud .nx{font-size:13px;opacity:.85}.hud .nm{font-size:19px;font-weight:750;line-height:1.15}.hud .ds{font-size:28px;font-weight:800;text-align:right;line-height:1}.hud .ds small{display:block;font-size:12px;font-weight:500;opacity:.8}
+.hud .st{grid-column:1/-1;display:flex;gap:12px;flex-wrap:wrap;font-size:14px}.hud .st b{font-size:17px}
+.hud.at{background:#065f46}.hud.off{background:#7f1d1d}
+.banner{position:fixed;left:10px;right:10px;z-index:960;border-radius:14px;padding:10px 14px;font-weight:650;font-size:15px;box-shadow:0 4px 14px #0005;display:flex;gap:10px;align-items:center}
+.banner.off{background:#b91c1c;color:#fff}.banner.end{background:#065f46;color:#fff}.banner button{background:#fff;color:#065f46;min-height:40px}
+.runbar{position:fixed;left:0;right:0;bottom:0;z-index:999;background:#fff;padding:10px 12px calc(12px + env(safe-area-inset-bottom));box-shadow:0 -6px 24px #0f2a4433;display:grid;grid-template-columns:1fr auto auto;gap:8px}
+.runbar .stop{background:#c2410c;color:#fff;font-size:20px;min-height:64px;border-radius:16px}
+.runbar .aux{min-height:64px;font-size:13px;padding:8px 10px;border-radius:16px}
+.ctr{display:grid;grid-template-columns:56px 1fr 56px;gap:8px;align-items:center}.ctr button{min-height:56px;font-size:26px;padding:0}.ctr output{font-size:30px;font-weight:800;text-align:center}
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0}.kpis div{background:var(--soft);border-radius:12px;padding:10px}.kpis b{display:block;font-size:22px}.kpis span{font-size:12.5px;color:var(--mut)}.kpis .ok b{color:var(--ok)}.kpis .bad b{color:var(--bad)}
+#map.nav{transition:transform .8s linear;transform-origin:50% 50%}#map.nav .leaflet-control-container{display:none}#map.nav .mk{transform:rotate(var(--hd,0deg))}
+.running .layerbtn,.running .gpsbtn{display:none}.running .toast{top:auto;bottom:100px}.running .leaflet-bottom{bottom:96px}
+.mot{display:grid;gap:6px}.mot label{display:flex;gap:10px;align-items:center;border:1.5px solid var(--line);border-radius:12px;padding:11px 12px;font-weight:600;font-size:14.5px}.mot input{width:22px;height:22px}.mot label.on{border-color:var(--bad);background:#fdecec}
+@media(min-width:900px){#sheet{top:52px;bottom:0;right:auto;width:420px;max-height:none!important;border-radius:0;overflow:auto}#map{left:420px}.grab{display:none}.toast{left:calc(50% + 210px)}.hud,.banner{left:420px}.runbar{left:auto;width:420px;right:0}}
+</style></head><body>
+<header><button id="btnBack" hidden aria-label="Voltar">←</button><h1 id="hTitle">Rota Studio Campo</h1><button onclick="document.getElementById('file').click()" title="Abrir pacote" aria-label="Abrir pacote">📂</button></header>
+<div id="map"></div>
+<button id="btnLayer" class="layerbtn">🛰 Satélite</button><button id="btnGps" class="gpsbtn">📍 GPS</button>
+<div id="hud" class="hud" hidden aria-live="polite"></div><div id="banner" class="banner" hidden></div>
+<div id="sheet"></div><div id="runbar" class="runbar" hidden></div>
+<div id="toast" class="toast" aria-live="polite"></div>
+<input type="file" id="file" accept=".json,application/json" hidden>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+'use strict';
+/* ===================== Rota Studio Campo 2.0 — acompanhamento de linha e vistoria de pontos no celular =====================
+ Abre o “pacote de campo” gerado no Rota Studio (computador): rotas, pontos, horários e quantidade de passageiros — sem nomes.
+ Acompanhamento (2.0): Modo A (no ônibus com o motorista: cabeçalho + checklist do “Controle de acompanhamento de linha”) ou
+ Modo B (acompanhamento individual de carro ou ônibus). GPS contínuo, paradas com raio de tolerância, embarques/desembarques,
+ fechamento com métricas e arquivo para importar no computador. Vistoria de pontos: checklist, fotos e posição pelo GPS.
+ Tudo fica guardado no próprio celular até ser enviado. */
+const APP='Rota Studio Campo 2.3';
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid=(p='i')=>p+Date.now().toString(36).slice(-6)+Math.random().toString(36).slice(2,6);
+const dm=(a,b)=>{const t=Math.PI/180,x=(b.lat-a.lat)*t,y=(b.lon-a.lon)*t,h=Math.sin(x/2)**2+Math.cos(a.lat*t)*Math.cos(b.lat*t)*Math.sin(y/2)**2;return 2*6371008.8*Math.asin(Math.min(1,Math.sqrt(h)));};
+const fmtM=m=>m>=1000?(m/1000).toLocaleString('pt-BR',{maximumFractionDigits:1})+' km':Math.round(m)+' m';
+function dec(s){if(!s)return[];let i=0,la=0,lo=0;const o=[];while(i<s.length){for(let k=0;k<2;k++){let sh=0,r=0,b;do{b=s.charCodeAt(i++)-63;r|=(b&31)<<sh;sh+=5;}while(b>=32);const d=r&1?~(r>>1):r>>1;if(k)lo+=d;else la+=d;}o.push([la/1e6,lo/1e6]);}return o;}
+function toast(m,k='',ms=4500){const el=$('toast');const d=document.createElement('div');d.className=k;d.textContent=m;el.prepend(d);while(el.children.length>3)el.lastChild.remove();setTimeout(()=>d.remove(),ms);}
+/* ---------- armazenamento no celular (IndexedDB → localStorage → memória) ---------- */
+const DB={db:null,mem:new Map(),mode:'mem',
+ open(){return new Promise(res=>{try{const rq=indexedDB.open('rota-studio-campo',1);rq.onupgradeneeded=()=>rq.result.createObjectStore('kv');rq.onsuccess=()=>{this.db=rq.result;this.mode='idb';res(true);};rq.onerror=()=>res(false);rq.onblocked=()=>res(false);}catch{res(false);}}).then(ok=>{if(!ok){try{localStorage.setItem('rsc:t','1');localStorage.removeItem('rsc:t');this.mode='ls';}catch{this.mode='mem';}}return this.mode;});},
+ get(k){if(this.mode==='idb')return new Promise(res=>{try{const q=this.db.transaction('kv','readonly').objectStore('kv').get(k);q.onsuccess=()=>res(q.result??null);q.onerror=()=>res(null);}catch{res(null);}});if(this.mode==='ls'){try{return Promise.resolve(JSON.parse(localStorage.getItem('rsc:'+k)||'null'));}catch{return Promise.resolve(null);}}return Promise.resolve(this.mem.get(k)??null);},
+ set(k,v){if(this.mode==='idb')return new Promise((res,rej)=>{try{const tx=this.db.transaction('kv','readwrite');tx.objectStore('kv').put(v,k);tx.oncomplete=()=>res(true);tx.onerror=()=>rej(tx.error);}catch(e){rej(e);}});if(this.mode==='ls'){try{localStorage.setItem('rsc:'+k,JSON.stringify(v));return Promise.resolve(true);}catch(e){return Promise.reject(e);}}this.mem.set(k,v);return Promise.resolve(true);},
+ del(k){if(this.mode==='idb')return new Promise(res=>{try{const tx=this.db.transaction('kv','readwrite');tx.objectStore('kv').delete(k);tx.oncomplete=()=>res(true);tx.onerror=()=>res(false);}catch{res(false);}});if(this.mode==='ls'){try{localStorage.removeItem('rsc:'+k);}catch{}}this.mem.delete(k);return Promise.resolve(true);}};
+/* ---------- estado ---------- */
+let PKGS=[];          // pacotes abertos (sem fotos)
+let RES={};           // resultados: chave do ponto → vistoria (fotos ficam à parte: 'ph:<id>')
+let ME='';            // nome do vistoriador
+let MAT='';           // matrícula de quem está em campo
+let AC=null;          // acompanhamento em andamento
+let HIST=[];          // acompanhamentos encerrados (fotos à parte: 'ph:<id>')
+let CONN=null;        // conexão com o Rota Studio: {url do Apps Script, chave, at = última base baixada}
+let FILA=[];          // envios esperando internet: {nome,dados,ref}
+let VIEW={v:'home'};  // tela atual
+let GPS=null,GPSW=null,GPS_ON=false;
+const DEF_CHECKS=[['luz','Iluminação adequada'],['calcada','Calçada / área de espera segura'],['parada','Espaço para o ônibus parar sem bloquear a via'],['visao','Boa visibilidade (longe de curva, lombada e esquina)'],['travessia','Passageiro não precisa atravessar via perigosa'],['abrigo','Abrigo / proteção contra sol e chuva'],['acess','Acessível (rampa, piso regular)']];
+const RESULTS={aprovado:['Aprovado','ok'],ressalva:['Aprovado com ressalva','warn'],reprovado:['Reprovado','bad']};
+const ST_TXT={validado:['Validado','ok'],proposto:['A vistoriar','warn'],reprovado:['Reprovado','bad'],casa:['Endereço (porta a porta)',''],inativo:['Inativo','']};
+/* configuração do acompanhamento: vem do pacote (Rota Studio → Acompanhamentos); sem ela, estes padrões */
+const AC_DEF={tol:50,offRoute:150,motivos:['Ponto de embarque incorreto','Motorista parou fora do ponto programado','Novo ponto solicitado / não cadastrado','Desvio por obra / trânsito','Parada de emergência / segurança']};
+/* checklist do formulário “Controle de acompanhamento de linha” (PDF). ok = respostas conformes */
+const CK=[
+ {k:'cracha',l:'Crachá com treinamento válido',t:'sn',ok:['Sim'],obs:1,h:'O motorista está com o crachá e o treinamento válidos?'},
+ {k:'cklist',l:'Check-list preenchido corretamente',t:'sn',ok:['Sim'],obs:1,h:'O check-list do veículo do dia está preenchido corretamente?'},
+ {k:'art',l:'ART',t:'sn',ok:['Sim'],obs:1,h:'A ART está no veículo e em dia?'},
+ {k:'alerta',l:'Sempre Alerta',t:'sn',ok:['Sim'],obs:1,h:'O item Sempre Alerta está conforme?'},
+ {k:'extintor',l:'Validade do extintor de incêndio',t:'date',h:'Informe a data de validade escrita no extintor. Vencido = não conforme.'},
+ {k:'kit',l:'Kit primeiros socorros',t:'opt',o:['Não possui','Possui (lacrado)','Possui (aberto)'],ok:['Possui (lacrado)'],h:'Lacrado = completo e intacto. Aberto ou ausente = não conforme.'},
+ {k:'painel',l:'Erro no painel',t:'opt',o:['Não possui','Possui'],ok:['Não possui'],desc:'Possui',h:'Há alguma luz de erro ou alerta acesa no painel? Se houver, descreva o problema.'},
+ {k:'roleta',l:'Roleta travada',t:'opt',o:['Não','Sim'],ok:['Não'],h:'A roleta está travando a passagem? “Sim” = não conforme.'},
+ {k:'visor',l:'Visor de velocidade',t:'opt',o:['Sim','Não'],ok:['Sim'],h:'O visor de velocidade para os passageiros está funcionando?'},
+ {k:'calco',l:'Calço',t:'opt',o:['Completo (calço e corrente)','Incompleto','Não possui'],ok:['Completo (calço e corrente)'],desc:'Incompleto',h:'Calço de roda com corrente. Se estiver incompleto, descreva o que falta.'}];
+const saveAll=()=>Promise.all([DB.set('pkgs',PKGS),DB.set('res',RES),DB.set('me',ME),DB.set('mat',MAT),DB.set('ac',AC),DB.set('hist',HIST),DB.set('conn',CONN),DB.set('fila',FILA)]).catch(e=>toast('Não foi possível guardar no celular: '+e.message+'. Envie o resultado antes de fechar.','bad',9000));
+const pkgOf=id=>PKGS.find(p=>p.id===id);
+const routeOf=(pk,rid)=>pk?.routes.find(r=>r.id===rid);
+const stopKey=s=>s.pid?'p:'+s.pid:s.key;
+const resOf=s=>RES[stopKey(s)];
+const stOf=s=>{const r=resOf(s);if(r)return 'feito';return s.st||'proposto';};
+const needs=s=>s.st==='proposto'||s.st==='reprovado';
+function routeProg(r){const list=r.stops.filter(s=>s.st!=='casa');const need=list.filter(needs);return{tot:list.length,need:need.length,done:list.filter(s=>resOf(s)).length,needDone:need.filter(s=>resOf(s)).length};}
+const pendingExport=()=>Object.values(RES).filter(x=>!x.sent).length;
+/* ---------- mapa ---------- */
+let MAP,LAY,MELAY,TRAIL,TILES={},TILE='ruas';
+function initMap(){if(typeof L==='undefined'){$('map').innerHTML='<div class="note warn" style="margin:70px 14px">O mapa precisa de internet para carregar. A vistoria e o acompanhamento funcionam sem mapa.</div>';return;}
+ MAP=L.map('map',{zoomControl:false,attributionControl:true}).setView([-17.22,-46.87],13);L.control.zoom({position:'bottomright'}).addTo(MAP);MAP.attributionControl.setPrefix('');
+ TILES.ruas=L.tileLayer('https://tile.openstreetmap.de/{z}/{x}/{y}.png',{maxZoom:20,maxNativeZoom:18,attribution:'© colaboradores do <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'});
+ TILES.sat=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:20,maxNativeZoom:19,attribution:'Imagens © Esri'});
+ TILES.ruas.addTo(MAP);let te=0;TILES.ruas.on('tileerror',()=>{if(++te===8&&TILE==='ruas'){MAP.removeLayer(TILES.ruas);TILES.ruas=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',{maxZoom:20,maxNativeZoom:19,attribution:'Tiles © Esri'}).addTo(MAP);}});
+ LAY=L.layerGroup().addTo(MAP);TRAIL=L.layerGroup().addTo(MAP);MELAY=L.layerGroup().addTo(MAP);MAP.on('click',()=>{if($('sheet').classList.contains('full'))$('sheet').classList.remove('full');});
+ MAP.on('dragstart',()=>{if(AC&&AC.status==='run'&&AC.follow){AC.follow=false;navSet(false);runBar();}});}
+function toggleTiles(){if(!MAP)return;MAP.removeLayer(TILES[TILE]);TILE=TILE==='ruas'?'sat':'ruas';TILES[TILE].addTo(MAP);$('btnLayer').textContent=TILE==='ruas'?'🛰 Satélite':'🗺 Ruas';}
+function drawRoute(pk,r,sel){if(!MAP)return;LAY.clearLayers();const b=L.latLngBounds([]);const col=r.dir==='VOLTA'?'#14b8a6':'#2563eb';const g=dec(r.line);if(g.length>1){L.polyline(g,{color:'#fff',weight:8,opacity:.9}).addTo(LAY);L.polyline(g,{color:col,weight:5}).addTo(LAY);g.forEach(c=>b.extend(c));}
+ for(const t of[r.start,r.end])if(t&&t.lat!=null){L.marker([t.lat,t.lon],{icon:L.divIcon({className:'',html:'<div class="mk" style="background:#0b1d2e">'+(t===r.end?'D':'O')+'</div>',iconSize:[28,28],iconAnchor:[14,14]})}).bindTooltip(esc(t.name)).addTo(LAY);b.extend([t.lat,t.lon]);}
+ r.stops.forEach((s,i)=>{b.extend([s.lat,s.lon]);const st=stOf(s);const m=L.marker([s.lat,s.lon],{icon:L.divIcon({className:'',html:'<div class="mk '+st+(sel===i?' sel':'')+'">'+(st==='feito'?'✓':s.n||i+1)+'</div>',iconSize:[28,28],iconAnchor:[14,14]}),zIndexOffset:sel===i?1000:0}).addTo(LAY);m.on('click',()=>go({v:'point',pk:pk.id,r:r.id,i}));});
+ if(sel!=null&&r.stops[sel])MAP.setView([r.stops[sel].lat,r.stops[sel].lon],Math.max(MAP.getZoom(),17));else if(b.isValid())MAP.fitBounds(b.pad(.1));}
+function drawPoints(pk,list,sel){if(!MAP)return;LAY.clearLayers();const b=L.latLngBounds([]);list.forEach((s,i)=>{b.extend([s.lat,s.lon]);const st=stOf(s);L.marker([s.lat,s.lon],{icon:L.divIcon({className:'',html:'<div class="mk '+st+(sel===i?' sel':'')+'">'+(st==='feito'?'✓':'•')+'</div>',iconSize:[28,28],iconAnchor:[14,14]})}).addTo(LAY).on('click',()=>go({v:'point',pk:pk.id,r:'§avulsos',i}));});if(sel!=null&&list[sel])MAP.setView([list[sel].lat,list[sel].lon],17);else if(b.isValid())MAP.fitBounds(b.pad(.1));}
+/* ---------- GPS ---------- */
+const ARROW='<svg viewBox="0 0 34 34" aria-hidden="true"><circle cx="17" cy="17" r="15" fill="#fff"/><path d="M17 4 L26 27 L17 22 L8 27 Z" fill="#e11d48"/></svg>';
+function drawMe(){if(!MAP||!GPS)return;MELAY.clearLayers();L.circle([GPS.lat,GPS.lon],{radius:Math.min(GPS.acc,200),color:'#e11d48',weight:1,fillOpacity:.08,interactive:false}).addTo(MELAY);
+ const run=AC&&AC.status==='run';L.marker([GPS.lat,GPS.lon],{icon:L.divIcon({className:'',html:run?'<div class="arrow" style="transform:rotate('+Math.round(GPS.hd||0)+'deg)">'+ARROW+'</div>':'<div class="me"></div>',iconSize:run?[34,34]:[18,18],iconAnchor:run?[17,17]:[9,9]}),interactive:false,zIndexOffset:2000}).addTo(MELAY);}
+function gpsToggle(force){const want=force??!GPS_ON;if(!want){if(GPSW!=null)navigator.geolocation.clearWatch(GPSW);GPSW=null;GPS_ON=false;MELAY&&MELAY.clearLayers();$('btnGps').classList.remove('on');return;}
+ if(GPS_ON)return;if(!navigator.geolocation){toast('Este navegador não tem GPS disponível.','warn');return;}if(!window.isSecureContext){toast(GPS_BLOCK,'bad',12000);return;}GPS_ON=true;$('btnGps').classList.add('on');let first=true;
+ GPSW=navigator.geolocation.watchPosition(p=>{const prev=GPS;const c=p.coords;GPS={lat:c.latitude,lon:c.longitude,acc:c.accuracy,at:Date.now()};
+  /* velocidade e rumo: do GPS; sem eles, calculados entre as duas últimas leituras */
+  const dd=prev?dm(prev,GPS):0,dt=prev?(GPS.at-prev.at)/1000:0;GPS.kmh=c.speed!=null&&c.speed>=0?c.speed*3.6:(dt>0&&dd>2?dd/dt*3.6:0);GPS.hd=c.heading!=null&&!isNaN(c.heading)?c.heading:(prev&&dd>5?brg(prev,GPS):prev?.hd||0);
+  drawMe();if(MAP&&first&&!(AC&&AC.status==='run')){first=false;MAP.setView([GPS.lat,GPS.lon],Math.max(MAP.getZoom(),16));}const el=$('gpsInfo');if(el)el.innerHTML=gpsInfoHtml();if(AC&&AC.status==='run')acTick();},
+  e=>{toast(e.code===1?(window.isSecureContext?'GPS sem permissão: toque no cadeado ao lado do endereço → Permissões → Localização → Permitir, e recarregue.':GPS_BLOCK):'GPS indisponível agora ('+e.message+').','warn',6000);if(!(AC&&AC.status==='run'))gpsToggle(false);},{enableHighAccuracy:true,maximumAge:3000,timeout:20000});}
+function gpsInfoHtml(){const t=VIEW.v==='point'?curStop():null;if(!GPS)return GPS_ON?'<span class="mut">Procurando o GPS…</span>':'';const age=(Date.now()-GPS.at)/1000;return `📍 Você está ${t?'a <b>'+fmtM(dm(GPS,t))+'</b> do ponto · ':''}precisão ±${Math.round(GPS.acc)} m${age>30?' · leitura de '+Math.round(age)+' s atrás':''}`;}
+const brg=(a,b)=>{const t=Math.PI/180,y=Math.sin((b.lon-a.lon)*t)*Math.cos(b.lat*t),x=Math.cos(a.lat*t)*Math.sin(b.lat*t)-Math.sin(a.lat*t)*Math.cos(b.lat*t)*Math.cos((b.lon-a.lon)*t);return(Math.atan2(y,x)/t+360)%360;};
+/* distância (m) de um ponto até o traçado planejado (projeção plana local; suficiente na escala da cidade) */
+function distLine(p,g){if(!g||g.length<2)return Infinity;const k=Math.cos(p.lat*Math.PI/180)*111320,K=110540;let best=Infinity;for(let i=1;i<g.length;i++){const ax=(g[i-1][1]-p.lon)*k,ay=(g[i-1][0]-p.lat)*K,bx=(g[i][1]-p.lon)*k,by=(g[i][0]-p.lat)*K,dx=bx-ax,dy=by-ay,L2=dx*dx+dy*dy;let t=L2?-(ax*dx+ay*dy)/L2:0;t=Math.max(0,Math.min(1,t));const d=Math.hypot(ax+t*dx,ay+t*dy);if(d<best)best=d;}return best;}
+/* ---------- telas ---------- */
+function go(v){VIEW=v;render();}
+function curStop(){const pk=pkgOf(VIEW.pk);if(!pk)return null;if(VIEW.r==='§avulsos')return pk.points[VIEW.i]||null;if(VIEW.r==='§novos')return VIEW.novo||null;return routeOf(pk,VIEW.r)?.stops[VIEW.i]||null;}
+function setHead(t,sub){$('hTitle').innerHTML=esc(t)+(sub?'<small>'+esc(sub)+'</small>':'');}
+function render(){const sh=$('sheet');sh.classList.remove('min');const v=VIEW.v;if(v!=='acRun'&&NAV)navSet(false);$('btnBack').hidden=v==='home'||v==='acRun';const run=v==='acRun';document.body.classList.toggle('running',run);$('hud').hidden=!run;$('runbar').hidden=!run;sh.hidden=run;if(!run)$('banner').hidden=true;
+ if(v==='home')return homeView();if(v==='vist')return vistView();if(v==='route')return routeView();if(v==='point')return pointView();if(v==='form')return formView();if(v==='send')return sendView();
+ if(v==='acNew')return acNewView();if(v==='acHead')return acHeadView();if(v==='acRun')return acRunView();if(v==='acStop')return acStopView();if(v==='acEnd')return acEndView();}
+/* início: as duas tarefas de campo */
+function homeView(){setHead(APP,ME?ME+(MAT?' · mat. '+MAT:''):'Acompanhamento de linha e vistoria de pontos');if(MAP){LAY.clearLayers();TRAIL.clearLayers();}const n=pendingExport(),hp=HIST.filter(a=>!a.sent).length;
+ let h=`<div class="grab" onclick="sheetSize()"></div>`;
+ h+=CONN?`<div class="note ok">☁ <b>Conectado ao Rota Studio</b>${CONN.at?' · base de '+new Date(CONN.at).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):' · base ainda não baixada'}${FILA.length?' · <b>'+FILA.length+' envio(s) na fila</b>':''}<div class="btns" style="margin:6px 0 0"><button class="sm" onclick="campoSync(true)">↻ Atualizar agora</button><button class="sm" onclick="campoConnect()">Trocar conexão</button></div></div>`:`<button class="big" onclick="campoConnect()"><span class="ic">☁</span><span><b>Conectar ao Rota Studio</b><small>Cole o código de conexão (Rota Studio → Acompanhamentos). A base chega sozinha e os resultados vão direto para o computador, sem exportar arquivo.</small></span></button>`;
+ if(!PKGS.length)h+=`<h2>Comece pelo pacote de campo</h2><p class="small mut">No computador, no Rota Studio: <b>Base ativa → Pontos</b> → <b>📱 Pacote de vistoria</b> (ou Planejamento → Exportar). Marque as linhas que vai acompanhar, envie o arquivo para este celular (WhatsApp, e-mail ou cabo) e abra aqui.</p><div class="drop" onclick="$('file').click()"><b style="font-size:16px">📂 Abrir pacote (.json)</b><br><span class="small">toque para escolher o arquivo</span></div>`;
+ else{if(AC&&AC.status==='run')h+=`<button class="big on" onclick="go({v:'acRun'})"><span class="ic">▶️</span><span><b>Continuar acompanhamento</b><small>${esc(AC.head.linha)} · ${esc(AC.head.sentido)} · ${AC.stops.length} parada(s) registrada(s)</small></span></button>`;
+  else h+=`<button class="big" onclick="acStart()"><span class="ic">🚌</span><span><b>Acompanhar uma viagem</b><small>Siga a linha pelo GPS, registre as paradas, os embarques e desembarques e o checklist.</small></span></button>`;
+  h+=`<button class="big" onclick="go({v:'vist'})"><span class="ic">📍</span><span><b>Vistoriar pontos</b><small>Checklist do ponto, fotos e posição pelo GPS${n?' · <b style="color:var(--warn)">'+n+' vistoria(s) a enviar</b>':''}.</small></span></button>`;
+  if(HIST.length){h+=`<h3>Acompanhamentos feitos neste celular</h3>`+HIST.slice(0,15).map((a,i)=>{const m=acMetrics(a);return `<div class="card" onclick="go({v:'acEnd',h:${i}})"><span class="num ${a.sent?'feito':''}">${a.mode==='A'?'A':'B'}</span><div class="grow" style="min-width:0"><b>${esc(a.head.linha)} · ${esc(a.head.sentido)}</b><small>${esc(fdt(a.head.data))} ${esc(a.head.hIni||'')}–${esc(a.head.hFim||'')} · ${m.nStops} parada(s) · ${m.out?'<b style="color:var(--bad)">'+m.out+' fora do ponto</b>':'todas no ponto'}</small></div><span class="chip ${a.sent?'ok':'warn'}">${a.sent?'enviado':'a enviar'}</span></div>`;}).join('');}
+  h+=`<div class="btns"><button onclick="$('file').click()">📂 Abrir outro pacote</button><button onclick="setMe()">👤 ${ME?'Trocar nome':'Seu nome'}</button></div>`;}
+ if(!window.isSecureContext)h+=`<div class="note bad"><b>⚠ GPS bloqueado neste modo de abertura.</b> O app foi aberto pelo Google Drive ou como arquivo, e o celular só libera o GPS para endereços <b>https</b>. Abra o Rota Studio Campo pelo link https e use “Adicionar à tela inicial”. A vistoria e o envio funcionam assim mesmo.</div>`;
+ if(DB.mode!=='idb')h+=`<div class="note warn">${DB.mode==='ls'?'Este navegador guarda pouco espaço: envie os resultados com frequência.':'Este navegador não deixou guardar dados: <b>envie o resultado antes de fechar</b>, ou abra este arquivo pelo Chrome.'}</div>`;
+ h+=`<p class="small mut" style="margin-top:14px">${APP}. Os pacotes não têm nomes nem endereços de passageiros. Tudo fica neste celular até você enviar${hp?' · '+hp+' acompanhamento(s) a enviar':''}.</p>`;$('sheet').innerHTML=h;}
+const fdt=d=>d?new Date(d+'T12:00').toLocaleDateString('pt-BR'):'';
+/* vistoria de pontos (a tela inicial da versão 1.0) */
+function vistView(){setHead('Vistoriar pontos',ME?'Vistoriador: '+ME:'');if(MAP)LAY.clearLayers();const n=pendingExport();
+ let h=`<div class="grab" onclick="sheetSize()"></div><h2>Rotas</h2>`;for(const pk of PKGS){h+=`<div class="small mut" style="margin-top:6px">${esc(pk.title||'Pacote')} · gerado em ${new Date(pk.made).toLocaleDateString('pt-BR')}${pk.by?' por '+esc(pk.by):''}</div>`;
+   for(const r of pk.routes){const pr=routeProg(r);h+=`<div class="card" onclick="go({v:'route',pk:'${pk.id}',r:'${r.id}'})"><span class="chip ${r.dir==='VOLTA'?'info':''}" style="${r.dir==='VOLTA'?'color:#0b7a70':'color:#1d4ed8'}">${esc(r.dir)}</span><div class="grow" style="min-width:0"><b>${esc(r.name)}</b><small>${r.stops.length} ponto(s)${pr.need?' · <b style="color:var(--warn)">'+(pr.need-pr.needDone)+' a vistoriar</b>':''}${pr.done?' · '+pr.done+' vistoriado(s) agora':''}</small>${pr.need?`<div class="bar"><i style="width:${pr.needDone/pr.need*100}%"></i></div>`:''}</div></div>`;}
+   if(pk.points?.length){const d=pk.points.filter(s=>resOf(s)).length;h+=`<div class="card" onclick="go({v:'route',pk:'${pk.id}',r:'§avulsos'})"><span class="num proposto">•</span><div class="grow"><b>Pontos avulsos a vistoriar</b><small>${pk.points.length} ponto(s) · ${d} feito(s)</small></div></div>`;}}
+ h+=`<div class="btns"><button class="p" onclick="go({v:'send'})" ${n?'':'disabled'}>📤 Enviar vistorias${n?' ('+n+')':''}</button><button onclick="novoPonto()">➕ Novo ponto aqui</button></div>`;
+ h+=`<p class="small mut">Pacotes antigos podem ser removidos depois de enviar o resultado: <a href="#" onclick="clearPkgs();return false">remover pacotes</a>.</p>`;$('sheet').innerHTML=h;}
+function routeView(){const pk=pkgOf(VIEW.pk);if(!pk)return go({v:'home'});if(VIEW.r==='§avulsos'){setHead('Pontos avulsos',pk.title);const list=pk.points;drawPoints(pk,list);
+  $('sheet').innerHTML=`<div class="grab" onclick="sheetSize()"></div><h2>Pontos avulsos a vistoriar</h2>${list.map((s,i)=>`<div class="card" onclick="go({v:'point',pk:'${pk.id}',r:'§avulsos',i:${i}})"><span class="num ${stOf(s)}">${stOf(s)==='feito'?'✓':'•'}</span><div class="grow"><b>${esc(s.name)}</b><small>${esc([s.ref,s.bairro].filter(Boolean).join(' · '))}</small></div></div>`).join('')}`;return;}
+ const r=routeOf(pk,VIEW.r);if(!r)return go({v:'home'});setHead(r.name,r.dir+(r.client?' · '+r.client:''));drawRoute(pk,r);const pr=routeProg(r);
+ $('sheet').innerHTML=`<div class="grab" onclick="sheetSize()"></div><div class="row"><h2 class="grow" style="margin:0">${esc(r.name)}</h2><span class="chip">${esc(r.dir)}</span></div><p class="small mut">${r.stops.length} ponto(s)${pr.need?' · '+(pr.need-pr.needDone)+' a vistoriar':''} · toque no ponto para ver, navegar ou vistoriar.</p><div id="gpsInfo" class="small">${gpsInfoHtml()}</div>
+ ${r.start?`<div class="card" style="cursor:default"><span class="num" style="background:#0b1d2e">O</span><div class="grow"><b>${esc(r.start.name)}</b><small>Origem</small></div></div>`:''}${r.stops.map((s,i)=>`<div class="card" onclick="go({v:'point',pk:'${pk.id}',r:'${r.id}',i:${i}})"><span class="num ${stOf(s)}">${stOf(s)==='feito'?'✓':s.n||i+1}</span><div class="grow" style="min-width:0"><b>${esc(s.name)}</b><small>${esc([s.ref,s.bairro].filter(Boolean).join(' · '))}${s.pax?' · '+s.pax+' pass.':''}</small>${needs(s)&&!resOf(s)?'<span class="chip warn">a vistoriar</span>':resOf(s)?`<span class="chip ${RESULTS[resOf(s).result][1]}">${RESULTS[resOf(s).result][0]}</span>`:''}</div><div class="tm">${esc(s.t||'')}</div></div>`).join('')}${r.end?`<div class="card" style="cursor:default"><span class="num" style="background:#0b1d2e">D</span><div class="grow"><b>${esc(r.end.name)}</b><small>Destino</small></div></div>`:''}`;}
+function navUrl(s,mode){return 'https://www.google.com/maps/dir/?api=1&destination='+s.lat.toFixed(6)+','+s.lon.toFixed(6)+'&travelmode='+(mode||'driving');}
+function pointView(){const pk=pkgOf(VIEW.pk),s=curStop();if(!pk||!s)return go({v:'home'});const r=VIEW.r==='§avulsos'?null:routeOf(pk,VIEW.r);
+ if(r)drawRoute(pk,r,VIEW.i);else if(VIEW.r==='§avulsos')drawPoints(pk,pk.points,VIEW.i);else if(MAP){LAY.clearLayers();L.marker([s.lat,s.lon],{icon:L.divIcon({className:'',html:'<div class="mk proposto sel">+</div>',iconSize:[28,28],iconAnchor:[14,14]})}).addTo(LAY);MAP.setView([s.lat,s.lon],18);}
+ setHead(s.name,r?r.name+' · '+r.dir:'Ponto');const x=resOf(s),st=ST_TXT[s.st]||ST_TXT.proposto;const list=r?r.stops:pk.points||[];
+ $('sheet').innerHTML=`<div class="grab" onclick="sheetSize()"></div><div class="row"><span class="num ${stOf(s)}">${stOf(s)==='feito'?'✓':s.n||'•'}</span><h2 class="grow" style="margin:0">${esc(s.name)}</h2></div>
+ <div class="kv">${s.ref?`<span>Referência</span><b>${esc(s.ref)}</b>`:''}${s.bairro?`<span>Bairro</span><b>${esc(s.bairro)}</b>`:''}${s.t?`<span>Horário</span><b>${esc(s.t)}</b>`:''}${s.pax?`<span>Passageiros</span><b>${s.pax}</b>`:''}<span>Situação</span><b><span class="chip ${st[1]}">${st[0]}</span></b>${s.last?`<span>Última vistoria</span><b>${new Date(s.last).toLocaleDateString('pt-BR')}</b>`:''}</div>
+ <div id="gpsInfo" class="small">${gpsInfoHtml()}</div>
+ ${x?`<div class="note ${RESULTS[x.result][1]}"><b>${RESULTS[x.result][0]}</b> · ${new Date(x.at).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})}${x.notes?'<br>'+esc(x.notes):''}${x.photos?.length?'<br>'+x.photos.length+' foto(s)':''}${x.pos?'<br>Posição corrigida pelo GPS (±'+Math.round(x.pos.acc||0)+' m)':''}${x.sent?'<br><span class="small">enviado</span>':''}</div>`:''}
+ ${s.st==='casa'?'<p class="small mut">Parada porta a porta (endereço de passageiro) — não precisa de vistoria.</p>':`<div class="btns one"><button class="p" onclick="go({...VIEW,v:'form'})">🔍 ${x?'Editar vistoria':'Vistoriar este ponto'}</button></div>`}
+ <div class="btns"><a href="${navUrl(s,'driving')}" target="_blank" rel="noopener" style="text-decoration:none"><button style="width:100%">🚌 Ir de carro</button></a><a href="${navUrl(s,'walking')}" target="_blank" rel="noopener" style="text-decoration:none"><button style="width:100%">🚶 Ir a pé</button></a></div>
+ ${r||VIEW.r==='§avulsos'?`<div class="btns"><button onclick="step(-1)" ${VIEW.i>0?'':'disabled'}>← Anterior</button><button onclick="step(1)" ${VIEW.i<list.length-1?'':'disabled'}>Próximo →</button></div>`:''}`;focusOn(s);}
+function step(d){go({...VIEW,i:VIEW.i+d});}
+/* no celular o painel cobre a parte de baixo do mapa: centraliza o ponto na parte visível */
+function focusOn(s){if(!MAP||!s)return;MAP.setView([s.lat,s.lon],Math.max(MAP.getZoom(),17),{animate:false});if(window.innerWidth<900){const h=$('sheet').offsetHeight;MAP.panBy([0,Math.round(h/2)],{animate:false});}}
+/* ---------- formulário de vistoria ---------- */
+let FORM=null;
+async function formView(){const pk=pkgOf(VIEW.pk),s=curStop();if(!pk||!s)return go({v:'home'});const old=resOf(s);const checks=pk.checks||DEF_CHECKS;
+ if(!FORM||FORM.key!==stopKey(s)){FORM={key:stopKey(s),checks:{...(old?.checks||{})},result:old?.result||'',notes:old?.notes||'',photos:[...(old?.photos||[])],pos:old?.pos||null,usePos:!!old?.pos};}
+ setHead('Vistoria',s.name);$('sheet').classList.add('full');
+ $('sheet').innerHTML=`<div class="grab" onclick="sheetSize()"></div><h2>${esc(s.name)}</h2>${s.ref?`<p class="small mut" style="margin-top:-4px">${esc(s.ref)}</p>`:''}
+ <h3>Checklist</h3><div class="chk">${checks.map(([k,l])=>`<div class="ck"><span>${esc(l)}</span><div class="seg">${[['ok','Sim'],['nao','Não'],['na','N/A']].map(([v,lb])=>`<label><input type="radio" name="c_${k}" value="${v}" ${(FORM.checks[k]||'')===v?'checked':''} onchange="FORM.checks['${k}']=this.value;sugRes()"><b>${lb}</b></label>`).join('')}</div></div>`).join('')}</div>
+ <h3>Resultado</h3><div class="res" id="resBox">${Object.entries(RESULTS).map(([k,[l]])=>`<label class="${k}${FORM.result===k?' on':''}"><input type="radio" name="res" value="${k}" ${FORM.result===k?'checked':''} onchange="FORM.result=this.value;markRes()"> ${l}</label>`).join('')}</div><p class="small mut" id="sugTxt"></p>
+ <h3>Observações</h3><textarea id="fNotes" rows="3" placeholder="ex.: ponto escuro à noite; melhor 20 m adiante, em frente à padaria" oninput="FORM.notes=this.value">${esc(FORM.notes)}</textarea>
+ <h3>Fotos</h3><div class="photos" id="phs"></div><input type="file" id="phIn" accept="image/*" capture="environment" multiple hidden onchange="addPhotos(this.files);this.value=''">
+ <h3>Posição do ponto</h3><label class="row small" style="gap:10px"><input type="checkbox" id="fPos" ${FORM.usePos?'checked':''} onchange="usePos(this.checked)" style="width:22px;height:22px"> <span class="grow">Corrigir a posição do ponto para onde estou agora (GPS)</span></label><div id="posInfo" class="small mut"></div>
+ <div class="btns" style="margin-top:14px"><button onclick="FORM=null;go({...VIEW,v:'point'})">Cancelar</button><button class="ok" onclick="saveForm()">💾 Salvar vistoria</button></div>`;
+ renderPhotos();sugRes();posInfo();}
+function sugRes(){const v=Object.values(FORM.checks);const nao=v.filter(x=>x==='nao').length;const el=$('sugTxt');if(!el)return;el.textContent=!v.length?'Marque o checklist e escolha o resultado.':nao?nao+' item(ns) com “Não”: avalie “com ressalva” ou “reprovado”.':'';if(!FORM.result&&v.length>=3){FORM.result=nao?'ressalva':'aprovado';qsaRes();}}
+function qsaRes(){document.querySelectorAll('#resBox input').forEach(i=>{i.checked=i.value===FORM.result;});markRes();}
+function markRes(){document.querySelectorAll('#resBox label').forEach(l=>l.classList.toggle('on',l.querySelector('input').checked));}
+async function renderPhotos(){const el=$('phs');if(!el)return;el.innerHTML='';for(const id of FORM.photos){const d=await DB.get('ph:'+id);if(!d)continue;const w=document.createElement('div');w.innerHTML=`<img src="${d}" alt="foto"><button title="Remover" onclick="rmPhoto('${id}')">✕</button>`;el.append(w);}if(FORM.photos.length<8){const a=document.createElement('div');a.className='addph';a.textContent='📷';a.onclick=()=>$('phIn').click();el.append(a);}}
+function shrink(file,max=1280,q=0.72){return new Promise((res,rej)=>{const fr=new FileReader();fr.onerror=()=>rej(fr.error);fr.onload=()=>{const im=new Image();im.onload=()=>{const k=Math.min(1,max/Math.max(im.width,im.height));const c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);res(c.toDataURL('image/jpeg',q));};im.onerror=()=>rej(new Error('imagem inválida'));im.src=fr.result;};fr.readAsDataURL(file);});}
+async function addPhotos(files){for(const f of[...files].slice(0,8-FORM.photos.length)){try{const d=await shrink(f);const id=uid('ph');await DB.set('ph:'+id,d);FORM.photos.push(id);}catch(e){toast('Foto não carregou: '+e.message,'warn');}}renderPhotos();}
+function rmPhoto(id){FORM.photos=FORM.photos.filter(x=>x!==id);renderPhotos();}
+function usePos(on){FORM.usePos=on;if(on&&!GPS_ON)gpsToggle(true);posInfo();}
+function posInfo(){const el=$('posInfo');if(!el)return;const s=curStop();if(!FORM.usePos){el.textContent='';return;}if(!GPS){el.textContent='Aguardando o GPS…';setTimeout(posInfo,1500);return;}FORM.pos={lat:+GPS.lat.toFixed(6),lon:+GPS.lon.toFixed(6),acc:Math.round(GPS.acc)};el.innerHTML=`Nova posição a <b>${fmtM(dm(FORM.pos,s))}</b> da atual · precisão ±${FORM.pos.acc} m${FORM.pos.acc>25?' — <span style="color:var(--warn)">fraca: espere o GPS melhorar ou vá para céu aberto</span>':''}`;if(VIEW.v==='form')setTimeout(posInfo,3000);}
+async function saveForm(){const pk=pkgOf(VIEW.pk),s=curStop();if(!s)return;if(!FORM.result){toast('Escolha o resultado da vistoria.','warn');return;}if(FORM.usePos&&!FORM.pos){toast('Aguarde o GPS para corrigir a posição (ou desmarque a opção).','warn');return;}
+ const old=resOf(s);const it={id:old?.id||uid('vi'),key:stopKey(s),pid:s.pid||'',name:s.name,lat:s.lat,lon:s.lon,result:FORM.result,checks:FORM.checks,notes:(FORM.notes||'').trim(),photos:FORM.photos,pos:FORM.usePos?FORM.pos:null,at:new Date().toISOString(),by:ME||'campo',mat:MAT||'',route:VIEW.r,pkg:pk.id,novo:!!s.novo};
+ RES[it.key]=it;if(s.novo&&VIEW.r==='§novos'){pk.novos=pk.novos||[];if(!pk.novos.some(n=>n.key===s.key))pk.novos.push(s);}FORM=null;await saveAll();toast('Vistoria salva no celular.','ok');
+ if(VIEW.r==='§novos')return go({v:'vist'});const list=VIEW.r==='§avulsos'?pk.points:routeOf(pk,VIEW.r).stops;const nx=list.findIndex((x,i)=>i>VIEW.i&&needs(x)&&!resOf(x));go(nx>=0?{...VIEW,v:'point',i:nx}:{...VIEW,v:'point'});}
+/* novo ponto proposto em campo */
+function novoPonto(){if(!GPS){gpsToggle(true);toast('Ligando o GPS… toque de novo em “Novo ponto aqui” quando a posição aparecer.','',6000);return;}const nm=prompt('Nome / referência do novo ponto (ex.: R. do Jambo, em frente à escola):','');if(nm===null)return;const pk=PKGS[0]||(()=>{const p={id:uid('pk'),title:'Pontos novos de campo',made:new Date().toISOString(),routes:[],points:[],checks:DEF_CHECKS};PKGS.push(p);return p;})();
+ const s={key:'novo:'+uid('n'),pid:'',name:nm.trim()||'Ponto novo de campo',ref:'',lat:+GPS.lat.toFixed(6),lon:+GPS.lon.toFixed(6),st:'proposto',novo:true};go({v:'form',pk:pk.id,r:'§novos',novo:s});}
+/* ---------- enviar vistorias ---------- */
+function sendView(){setHead('Enviar vistorias',ME||'');const items=Object.values(RES);const pend=items.filter(x=>!x.sent);
+ $('sheet').innerHTML=`<div class="grab" onclick="sheetSize()"></div><h2>Enviar vistorias</h2><p class="small">${items.length} vistoria(s) neste celular · <b>${pend.length} ainda não enviada(s)</b>.</p>
+ ${!ME||!MAT?`<div class="note warn">Informe seu nome e matrícula antes de enviar: <a href="#" onclick="setMe();return false">definir</a>.</div>`:''}
+ <label class="row small" style="gap:10px;margin:8px 0"><input type="checkbox" id="sAll" style="width:22px;height:22px"> <span>Incluir também as já enviadas</span></label>
+ <div class="btns one">${CONN?'<button class="ok" onclick="doSend(\'cloud\')">☁ Enviar direto ao Rota Studio</button>':''}<button class="p" onclick="doSend(true)">📤 Compartilhar (WhatsApp, e-mail…)</button><button onclick="doSend(false)">⬇ Salvar arquivo no celular</button></div>
+ <p class="small mut">No computador, no Rota Studio: <b>Importar</b> e escolha este arquivo. As fotos vão junto (reduzidas).</p>`;}
+async function doSend(share){const all=$('sAll')?.checked;const list=Object.values(RES).filter(x=>all||!x.sent);if(!list.length){toast('Nenhuma vistoria para enviar.','warn');return;}
+ const items=[];for(const x of list){const photos=[];for(const id of x.photos||[]){const d=await DB.get('ph:'+id);if(d)photos.push(d);}items.push({...x,photos});}
+ const data={kind:'rota-studio-vistorias',v:1,app:APP,made:new Date().toISOString(),by:ME||'campo',items};const name='Vistorias_'+(ME||'campo').replace(/[^\wÀ-ú]+/g,'_')+'_'+new Date().toISOString().slice(0,16).replace(/[:T]/g,'-')+'.json';
+ if(share==='cloud'){await enviar(name,data,{vist:list.map(x=>x.key)});toast(FILA.length?'Sem conexão agora: as vistorias ficaram na fila e vão sozinhas quando houver internet.':'Vistorias entregues ao Rota Studio.',FILA.length?'warn':'ok',7000);go({v:'vist'});return;}
+ if(!await shareFile(data,name,share,'Vistorias de pontos',items.length+' vistoria(s) — '+(ME||'campo')))return;
+ for(const x of list)RES[x.key].sent=new Date().toISOString();await saveAll();toast(items.length+' vistoria(s) prontas para o computador.','ok');go({v:'vist'});}
+/* compartilha o arquivo (WhatsApp, e-mail…) ou salva em Downloads; devolve false se a pessoa cancelou */
+async function shareFile(data,name,share,title,text){const blob=new Blob([JSON.stringify(data)],{type:'application/json'});
+ if(share&&navigator.canShare){try{const f=new File([blob],name,{type:'application/json'});if(navigator.canShare({files:[f]})){await navigator.share({files:[f],title,text});return true;}}catch(e){if(e.name==='AbortError')return false;}}
+ const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.append(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},2000);if(share)toast('Este celular não compartilha arquivos direto: o arquivo foi salvo em Downloads. Envie pelo WhatsApp a partir de lá.','',8000);return true;}
+/* ---------- abrir pacote ---------- */
+async function openFile(f){if(!f)return;let d;try{d=JSON.parse(await f.text());}catch{toast('Arquivo inválido (não é um pacote do Rota Studio).','bad');return;}
+ if(d?.kind==='rota-studio-vistorias'||d?.kind==='rota-studio-acomp'){toast('Este é um arquivo de resultado — importe no computador, no Rota Studio.','warn',7000);return;}
+ if(d?.kind!=='rota-studio-campo'||!Array.isArray(d.routes)){toast('Este arquivo não é um pacote de campo do Rota Studio.','bad');return;}
+ const pk=await loadPkg(d);toast('Pacote aberto: '+pk.routes.length+' rota(s), '+(d.count||0)+' ponto(s) a vistoriar.','ok');go({v:'home'});}
+async function loadPkg(d){const id=d.auto?'auto':'pk'+(d.made||'')+(d.title||'');const old=PKGS.findIndex(p=>p.id===id);const pk={id,title:d.title,made:d.made,by:d.by,routes:d.routes,points:d.points||[],checks:Array.isArray(d.checks)&&d.checks.length?d.checks:DEF_CHECKS,acomp:{...AC_DEF,...(d.acomp||{})}};
+ if(old>=0)PKGS[old]=pk;else PKGS.unshift(pk);if(!ME&&d.by&&!d.auto)ME=d.by;await saveAll();return pk;}
+async function clearPkgs(){const pend=pendingExport();if(pend&&!confirm(pend+' vistoria(s) ainda não foram enviadas. Remover os pacotes mesmo assim? (As vistorias continuam guardadas.)'))return;if(AC&&AC.status==='run'){toast('Há um acompanhamento em andamento: finalize antes de remover os pacotes.','warn');return;}if(!confirm('Remover todos os pacotes deste celular?'))return;PKGS=[];await saveAll();go({v:'home'});}
+function setMe(){const n=prompt('Seu nome (aparece nas vistorias e nos acompanhamentos):',ME||'');if(n===null)return;ME=n.trim();const m=prompt('Sua matrícula:',MAT||'');if(m!==null)MAT=m.trim();saveAll();render();}
+function sheetSize(){const s=$('sheet');if(s.classList.contains('min'))s.classList.remove('min');else if(s.classList.contains('full'))s.classList.replace('full','min');else s.classList.add('full');}
+
+/* ===================== Acompanhamento de linha ===================== */
+const hhmm=d=>{const x=new Date(d);return String(x.getHours()).padStart(2,'0')+':'+String(x.getMinutes()).padStart(2,'0');};
+const todayIso=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
+const minOf=t=>{const m=/(\d{1,2}):(\d{2})/.exec(t||'');return m?+m[1]*60+ +m[2]:null;};
+const acRoute=a=>routeOf(pkgOf(a.route.pk),a.route.id);
+/* 2.3: ao responder, a tela desce sozinha até o próximo item sem resposta */
+const nextTo=sel=>setTimeout(()=>{const el=typeof sel==='string'?document.querySelector(sel):sel;el?.scrollIntoView({behavior:'smooth',block:'center'});},180);
+const GPS_BLOCK='GPS bloqueado: o app foi aberto pelo Google Drive ou como arquivo, e o celular só libera o GPS para endereços https. Abra o Rota Studio Campo pelo link https (peça ao responsável) e adicione à tela inicial.';
+let DRAFT=null,LINE=[],WAKE=null,LASTSAVE=0;
+function acStart(){if(AC&&AC.status==='run')return go({v:'acRun'});if(!PKGS.some(p=>p.routes.length)){toast('O pacote aberto não tem linhas. Gere o pacote no computador marcando as linhas.','warn',7000);return;}DRAFT={step:1,mode:'',rk:''};go({v:'acNew'});}
+/* passo 1: linha e modo */
+function acNewView(){setHead('Novo acompanhamento','1 de 3 · linha e modo');if(MAP){LAY.clearLayers();TRAIL.clearLayers();}const D=DRAFT;
+ let h=`<div class="grab" onclick="sheetSize()"></div><details class="help"><summary>ⓘ Como funciona o acompanhamento</summary><p>1. Escolha a linha e como você vai acompanhar. 2. Preencha o cabeçalho (e o checklist, no ônibus). 3. Siga a viagem: o GPS mostra o próximo ponto e a distância. Em cada parada, toque em <b>Registrar parada</b> e informe quem entrou e saiu. 4. No fim, veja o resumo e envie o arquivo para o computador.</p></details>
+ <h3>Como você vai acompanhar?</h3>
+ <button class="big ${D.mode==='A'?'on':''}" onclick="DRAFT.mode='A';render();nextTo('#acLinhas')"><span class="ic">🧑‍✈️</span><span><b>Modo A — No ônibus, com o motorista</b><small>Auditoria completa: cabeçalho do controle de acompanhamento + checklist do veículo.</small></span></button>
+ <button class="big ${D.mode==='B'?'on':''}" onclick="DRAFT.mode='B';render();nextTo('#acLinhas')"><span class="ic">🚗</span><span><b>Modo B — Acompanhamento individual</b><small>Você segue a linha de carro ou de ônibus, sem o checklist do motorista.</small></span></button>
+ <h3 id="acLinhas">Qual linha?</h3>`;
+ PKGS.forEach((pk,pi)=>pk.routes.forEach((r,ri)=>{if(!r.stops.length)return;const k=pi+'|'+ri,t=r.stops[0]?.t||r.t0||r.time||'';h+=`<div class="card" style="${D.rk===k?'border-color:var(--a);background:#e6f4f7':''}" onclick="DRAFT.rk='${k}';acPreview();render();nextTo('#acGo')"><span class="chip" style="color:${r.dir==='VOLTA'?'#0b7a70':'#1d4ed8'}">${esc(r.dir)}</span><div class="grow" style="min-width:0"><b>${esc(r.name)}</b><small>${r.stops.length} ponto(s)${r.client?' · '+esc(r.client):''}</small></div><div class="tm">${esc(t)}</div></div>`;}));
+ h+=`<div class="btns"><button onclick="go({v:'home'})">Cancelar</button><button class="p" id="acGo" onclick="acToHead()">Continuar →</button></div>`;$('sheet').innerHTML=h;}
+function acPreview(){const[pi,ri]=(DRAFT.rk||'').split('|');const pk=PKGS[pi],r=pk?.routes[ri];if(r)drawRoute(pk,r);}
+function acToHead(){if(!DRAFT.mode){toast('Escolha o modo: A (com o motorista) ou B (individual).','warn');return;}if(!DRAFT.rk){toast('Escolha a linha que vai acompanhar.','warn');return;}
+ const[pi,ri]=DRAFT.rk.split('|');const pk=PKGS[pi],r=pk?.routes[ri];if(!r){toast('Linha não encontrada.','warn');return;}const pkId=pk.id,rid=r.id;const now=new Date();
+ DRAFT.head={data:todayIso(),hIni:hhmm(now),linha:r.code||r.name,sentido:r.dir,frente:r.client||'',carro:'',motorista:'',matMot:'',acomp:ME||'',matAcomp:MAT||'',veic:''};DRAFT.ck={};DRAFT.ckDef=pk.acomp?.ck?.length?pk.acomp.ck:CK;DRAFT.skip={on:false,why:''};DRAFT.route={pk:pkId,id:rid,rid:r.rid||'',name:r.name,dir:r.dir,client:r.client||'',code:r.code||''};go({v:'acHead'});}
+const fld=(k,l,req,hint,attr='')=>`<label class="f"><span>${l}${req?' <i>*</i>':''}</span><input type="text" id="h_${k}" value="${esc(DRAFT.head[k]||'')}" oninput="DRAFT.head['${k}']=this.value" ${attr} ${req?'aria-required="true"':''}>${hint?`<small class="hint">${hint}</small>`:''}</label>`;
+/* passo 2: cabeçalho (e checklist no Modo A) */
+function acHeadView(){const D=DRAFT,A=D.mode==='A';setHead(A?'Modo A — com o motorista':'Modo B — individual','2 de 3 · '+(A?'cabeçalho e checklist':'dados do acompanhamento'));$('sheet').classList.add('full');
+ let h=`<div class="grab" onclick="sheetSize()"></div><h2>${esc(D.route.name)} · ${esc(D.route.dir)}</h2><p class="small mut" style="margin-top:-4px">Campos com <b style="color:var(--bad)">*</b> são obrigatórios.</p>
+ <div class="g2"><label class="f"><span>Data <i>*</i></span><input type="date" value="${esc(D.head.data)}" oninput="DRAFT.head.data=this.value"></label><label class="f"><span>Horário início <i>*</i></span><input type="time" value="${esc(D.head.hIni)}" oninput="DRAFT.head.hIni=this.value"></label></div>
+ <div class="g2">${fld('linha','Linha',1,'')}${fld('sentido','Sentido',1,'')}</div>${fld('frente','Frente de serviço',0,'')}`;
+ if(A)h+=`<h3>Veículo e motorista</h3>${fld('carro','Carro (prefixo)',1,'Número do carro pintado no ônibus.')}<div class="g2">${fld('motorista','Motorista',1,'')}${fld('matMot','Mat. motorista',1,'','inputmode="numeric"')}</div>
+  <h3>Acompanhante (você)</h3><div class="g2">${fld('acomp','Nome',1,'')}${fld('matAcomp','Matrícula',1,'','inputmode="numeric"')}</div>
+  <h3>Checklist do acompanhamento</h3>
+  <label class="row" style="gap:10px;border:1.5px solid ${D.skip.on?'var(--warn)':'var(--line)'};border-radius:12px;padding:10px 12px;background:${D.skip.on?'#fff4e0':'#fff'}"><input type="checkbox" ${D.skip.on?'checked':''} onchange="DRAFT.skip.on=this.checked;render()" style="width:24px;height:24px"><span class="grow"><b>Desconsiderar checklist</b><small class="hint">Só em situação atípica, quando o checklist não se aplica. Fica registrado no acompanhamento.</small></span></label>
+  ${D.skip.on?`<label class="f"><span>Por que o checklist foi dispensado? <i>*</i></span><textarea rows="2" oninput="DRAFT.skip.why=this.value" placeholder="ex.: troca de veículo em rota; veículo reserva sem documentação a bordo">${esc(D.skip.why)}</textarea></label>`:D.ckDef.map(ckHtml).join('')}`;
+ else h+=`<h3>Quem está acompanhando</h3><div class="g2">${fld('acomp','Nome',1,'')}${fld('matAcomp','Matrícula',1,'','inputmode="numeric"')}</div>
+  <h3>Veículo do acompanhamento <i style="color:var(--bad);font-style:normal">*</i></h3><div class="seg s2">${['Carro','Ônibus'].map(v=>`<label><input type="radio" name="veic" value="${v}" ${D.head.veic===v?'checked':''} onchange="DRAFT.head.veic=this.value;nextTo('#acStart')"><b>${v==='Carro'?'🚗':'🚌'} ${v}</b></label>`).join('')}</div><small class="hint">No Modo B o checklist do motorista não se aplica.</small>`;
+ h+=`<div class="btns" style="margin-top:14px"><button onclick="go({v:'acNew'})">← Voltar</button><button class="ok" id="acStart" onclick="acBegin()">▶ Iniciar viagem</button></div>`;$('sheet').innerHTML=h;}
+function ckHtml(c){const v=DRAFT.ck[c.k]||{},bad=v.v&&!ckOk(c,v);
+ const seg=c.t==='date'?`<input type="date" value="${esc(v.v||'')}" onchange="ckSet('${c.k}','v',this.value)">`:`<div class="seg ${(c.t==='sn'?['Sim','Não']:c.o).length===2?'s2':(c.o||[]).some(o=>o.length>14)?'sv':''}">${(c.t==='sn'?['Sim','Não']:c.o).map(o=>`<label><input type="radio" name="ck_${c.k}" value="${esc(o)}" ${v.v===o?'checked':''} onchange="ckSet('${c.k}','v',this.value)"><b class="${c.ok.includes(o)?'g':'r'}">${esc(o)}</b></label>`).join('')}</div>`;
+ return `<div class="cki ${bad?'bad':''}" id="ck_${c.k}"><b>${esc(c.l)}</b>${seg}<small class="hint">${esc(c.h)}</small>${c.obs||(c.desc&&v.v===c.desc)?`<input type="text" style="margin-top:6px" placeholder="${c.desc&&v.v===c.desc?'Descreva o problema *':'Observações (opcional)'}" value="${esc(v.obs||'')}" oninput="ckSet('${c.k}','obs',this.value,1)">`:''}</div>`;}
+function ckSet(k,f,val,quiet){DRAFT.ck[k]={...(DRAFT.ck[k]||{}),[f]:val};if(quiet)return;const L=DRAFT.ckDef,i=L.findIndex(x=>x.k===k),c=L[i],el=$('ck_'+k);if(el)el.outerHTML=ckHtml(c);
+ if(f!=='v')return;if(c.desc&&val===c.desc){nextTo('#ck_'+k);setTimeout(()=>$('ck_'+k)?.querySelector('input[type=text]')?.focus(),400);return;}const nx=L.slice(i+1).find(x=>!DRAFT.ck[x.k]?.v);nextTo(nx?'#ck_'+nx.k:'#acStart');}
+function ckOk(c,v){if(!v||!v.v)return false;if(c.t==='date')return v.v>=todayIso();return c.ok.includes(v.v);}
+function acBegin(){const D=DRAFT,A=D.mode==='A',H=D.head;const req=A?['data','hIni','linha','sentido','carro','motorista','matMot','acomp','matAcomp']:['data','hIni','linha','sentido','acomp','matAcomp'];
+ const miss=req.filter(k=>!String(H[k]||'').trim());if(miss.length){toast('Preencha os campos obrigatórios (*).','warn');const el=$('h_'+miss[0]);if(el){el.focus();el.scrollIntoView({block:'center'});}return;}
+ if(!A&&!H.veic){toast('Informe o veículo do acompanhamento: carro ou ônibus.','warn');return;}
+ if(A&&D.skip.on&&String(D.skip.why).trim().length<5){toast('Explique por que o checklist foi dispensado.','warn');return;}
+ if(A&&!D.skip.on){const pend=D.ckDef.filter(c=>!D.ck[c.k]?.v);if(pend.length){toast('Responda todo o checklist ('+pend.length+' item(ns) faltando) ou marque “Desconsiderar checklist”.','warn',6000);$('ck_'+pend[0].k)?.scrollIntoView({block:'center'});return;}
+  const dsc=D.ckDef.filter(c=>c.desc&&D.ck[c.k]?.v===c.desc&&!String(D.ck[c.k].obs||'').trim());if(dsc.length){toast('Descreva o problema em “'+dsc[0].l+'”.','warn');$('ck_'+dsc[0].k)?.scrollIntoView({block:'center'});return;}}
+ ME=H.acomp.trim();MAT=H.matAcomp.trim();const pk=pkgOf(D.route.pk);
+ AC={id:uid('ac'),v:1,app:APP,mode:D.mode,route:D.route,head:{...H},ck:A&&!D.skip.on?D.ck:{},ckDef:A?D.ckDef:null,ckSkip:A&&D.skip.on?{on:true,why:D.skip.why.trim(),at:new Date().toISOString()}:null,cfg:{...AC_DEF,...(pk?.acomp||{})},startAt:new Date().toISOString(),endAt:'',stops:[],trail:[],off:[],status:'run',follow:true,log:[{at:new Date().toISOString(),t:'início'+(A&&D.skip.on?' — checklist dispensado: '+D.skip.why.trim():'')}]};
+ DRAFT=null;saveAll();gpsToggle(true);wake(true);go({v:'acRun'});toast('Acompanhamento iniciado. Mantenha a tela ligada e o GPS ativo.','ok',6000);}
+function wake(on){if(!on){WAKE?.release?.();WAKE=null;return;}if('wakeLock' in navigator)navigator.wakeLock.request('screen').then(w=>{WAKE=w;}).catch(()=>{});}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&AC&&AC.status==='run')wake(true);});
+/* passo 3: viagem — painel no alto (próximo ponto e distância), mapa seguindo o GPS e botões grandes embaixo */
+function acRunView(){if(!AC)return go({v:'home'});const r=acRoute(AC);setHead(AC.head.linha+' · '+AC.head.sentido,(AC.mode==='A'?'Modo A':'Modo B')+' · em andamento');LINE=r?dec(r.line):[];
+ if(MAP){const pk=pkgOf(AC.route.pk);if(r)drawRoute(pk,r);drawStopsAc();drawTrail();}gpsToggle(true);runBar();hud();if(AC.follow&&GPS)navSet(true);if(GPS)acTick();}
+function drawStopsAc(){if(!MAP)return;for(const s of AC.stops)if(s.lat!=null)L.circleMarker([s.lat,s.lon],{radius:7,color:'#fff',weight:2,fillColor:s.inTol?'#15803d':'#b91c1c',fillOpacity:1}).bindTooltip(esc((s.inTol?'No ponto ':'Fora do ponto ')+(s.match?'Nº '+s.match.n:'')+' · '+hhmm(s.at))).addTo(LAY);}
+function drawTrail(){if(!MAP)return;TRAIL.clearLayers();if(AC.trail.length>1)L.polyline(AC.trail.map(p=>[p[0],p[1]]),{color:'#f97316',weight:4,opacity:.9,dashArray:'1 7',lineCap:'round'}).addTo(TRAIL);}
+function runBar(){const el=$('runbar');el.innerHTML=`<button class="stop" onclick="acStopOpen()">🛑 Registrar parada</button><button class="aux" onclick="acFollow()" title="${AC?.follow?'Ver o mapa inteiro, parado, com o norte para cima':'Voltar à navegação: o mapa acompanha o veículo e gira para a direção da viagem'}">${AC?.follow?'🗺 Ver mapa':'🧭 Navegar'}</button><button class="aux bad" onclick="acFinishAsk()">🏁 Finalizar</button>`;}
+function acFollow(){AC.follow=!AC.follow;navSet(AC.follow);runBar();if(!AC.follow){const r=acRoute(AC),g=r?dec(r.line):[];if(g.length>1)MAP.fitBounds(L.latLngBounds(g).pad(.1));}}
+/* 2.3: navegação estilo Waze — o mapa gira para a direção da viagem, aproxima e deixa o veículo no terço de baixo da tela.
+   O Leaflet não gira o mapa: gira o próprio elemento do mapa (um quadrado do tamanho da diagonal da tela, para não sobrar canto vazio). */
+let NAV=false;
+function navSet(on){NAV=!!on&&!!MAP;const m=$('map');if(!m)return;if(NAV){const W=innerWidth-(innerWidth>=900?420:0),H=innerHeight-52,D=Math.ceil(Math.hypot(W,H));Object.assign(m.style,{width:D+'px',height:D+'px',left:Math.round((innerWidth>=900?420:0)+(W-D)/2)+'px',top:Math.round(52+(H-D)/2)+'px',right:'auto',bottom:'auto'});m.classList.add('nav');}
+ else{m.removeAttribute('style');m.classList.remove('nav');}if(MAP){MAP.invalidateSize({pan:false});if(NAV)navMove(true);}}
+function navMove(now){if(!NAV||!MAP||!GPS)return;const hd=GPS.hd||0,z=Math.max(MAP.getZoom(),17),r=hd*Math.PI/180,off=(innerHeight-52)*.22;
+ const c=MAP.unproject(MAP.project([GPS.lat,GPS.lon],z).add(L.point(Math.sin(r)*off,-Math.cos(r)*off)),z);MAP.setView(c,z,{animate:!now});const m=$('map');m.style.transform='rotate('+(-hd)+'deg)';m.style.setProperty('--hd',hd+'deg');}
+const visited=()=>new Set(AC.stops.filter(s=>s.inTol&&s.match).map(s=>s.match.i));
+function nextIdx(){const r=acRoute(AC);if(!r)return -1;const v=visited();const last=Math.max(-1,...[...v]);for(let i=last+1;i<r.stops.length;i++)if(!v.has(i))return i;return -1;}
+function nearest(p){const r=acRoute(AC);let best=null;(r?.stops||[]).forEach((s,i)=>{const d=dm(p,s);if(!best||d<best.d)best={i,n:s.n||i+1,name:s.name,d,t:s.t||'',pid:s.pid||''};});return best;}
+function hud(){const el=$('hud');if(!el||!AC)return;const r=acRoute(AC),i=nextIdx(),s=i>=0?r.stops[i]:null,d=s&&GPS?dm(GPS,s):null,tol=AC.cfg.tol;
+ const bordo=acBordo(AC),openOff=AC.off.find(o=>!o.end);el.className='hud'+(openOff?' off':d!=null&&d<=tol?' at':'');
+ el.innerHTML=s?`<div><div class="nx">${d!=null&&d<=tol?'✅ No ponto':'Próximo ponto'} · Nº ${esc(s.n||i+1)}${s.t?' · programado '+esc(s.t):''}</div><div class="nm">${esc(s.name)}</div></div><div class="ds">${d!=null?fmtM(d):'—'}<small>${GPS?'±'+Math.round(GPS.acc)+' m':'sem GPS'}</small></div>`
+  :`<div><div class="nx">Todos os pontos programados foram registrados</div><div class="nm">Siga até o destino e finalize</div></div><div class="ds">✓</div>`;
+ el.innerHTML+=`<div class="st"><span>🚌 <b>${GPS?Math.round(GPS.kmh||0):0}</b> km/h</span><span>👥 a bordo <b>${bordo}</b></span><span>🛑 <b>${AC.stops.length}</b> parada(s)</span><span>⏱ <b>${durTxt(Date.now()-Date.parse(AC.startAt))}</b></span></div>`;}
+const durTxt=ms=>{const m=Math.max(0,Math.round(ms/60000));return m>=60?Math.floor(m/60)+'h'+String(m%60).padStart(2,'0'):m+' min';};
+const acBordo=a=>{let b=0;for(const s of a.stops)b=Math.max(0,b+(+s.emb||0)-(+s.des||0));return b;};
+/* a cada leitura do GPS: rastro, saída do traçado, chegada ao ponto e sugestão de encerramento */
+function acTick(){if(!AC||AC.status!=='run'||!GPS)return;const p=GPS,t=AC.trail.at(-1),now=Date.now();
+ if(!t||dm({lat:t[0],lon:t[1]},p)>=15||now-t[2]>15000){AC.trail.push([+p.lat.toFixed(6),+p.lon.toFixed(6),now]);if(MAP&&VIEW.v==='acRun')drawTrail();}
+ if(LINE.length>1&&p.acc<80){const d=distLine(p,LINE),o=AC.off.find(x=>!x.end);if(d>AC.cfg.offRoute){if(!o)AC.off.push({at:new Date().toISOString(),lat:+p.lat.toFixed(6),lon:+p.lon.toFixed(6),max:Math.round(d)});else o.max=Math.max(o.max,Math.round(d));}else if(o)o.end=new Date().toISOString();}
+ if(MAP&&AC.follow&&VIEW.v==='acRun'){if(NAV)navMove();else navSet(true);}
+ if(VIEW.v==='acRun'){hud();banner();}if(now-LASTSAVE>10000){LASTSAVE=now;saveAll();}}
+function banner(){const el=$('banner');const o=AC.off.find(x=>!x.end),r=acRoute(AC);const end=r?.end||r?.stops.at(-1),i=nextIdx();
+ const top=(52+$('hud').offsetHeight+8)+'px';if(o){el.className='banner off';el.style.top=top;el.innerHTML=`⚠ Fora do traçado planejado (${fmtM(o.max)}). Se for desvio, registre a parada com o motivo.`;el.hidden=false;return;}
+ if(end&&GPS&&dm(GPS,end)<=Math.max(AC.cfg.tol,60)&&(AC.stops.length||i<0)){el.className='banner end';el.style.top=top;el.innerHTML=`<span class="grow">🏁 Chegando ao fim da linha.</span><button onclick="acFinishAsk()">Finalizar viagem</button>`;el.hidden=false;return;}
+ el.hidden=true;}
+/* ---------- registrar parada ---------- */
+let STOP=null;
+function acStopOpen(){const fresh=GPS&&Date.now()-GPS.at<60000;const p=fresh?{lat:+GPS.lat.toFixed(6),lon:+GPS.lon.toFixed(6),acc:Math.round(GPS.acc)}:null;const m=p?nearest(p):null,inTol=!!(m&&m.d<=AC.cfg.tol);
+ STOP={id:uid('pa'),at:new Date().toISOString(),lat:p?.lat??null,lon:p?.lon??null,acc:p?.acc??null,match:m?{i:m.i,n:m.n,name:m.name,d:Math.round(m.d),pid:m.pid}:null,inTol,semGps:!p,tipo:inTol?'Regular':'Novo',motivo:'',motivoTxt:'',emb:0,des:0,obs:'',photo:'',prog:m&&inTol?m.t:'',real:hhmm(Date.now())};
+ go({v:'acStop'});}
+function acStopView(){const S=STOP,tol=AC.cfg.tol;setHead('Registrar parada',AC.head.linha+' · '+S.real);$('sheet').classList.add('full');
+ const st=S.semGps?`<div class="note warn"><b>Sem GPS agora.</b> A parada fica registrada sem posição (não dá para conferir o raio).</div>`
+  :S.inTol?`<div class="note ok"><b>✅ No ponto Nº ${esc(S.match.n)}</b> — ${esc(S.match.name)}<br>${S.match.d} m do ponto programado (tolerância ${tol} m)${S.prog?' · programado '+esc(S.prog)+' · realizado '+esc(S.real):''}</div>`
+  :`<div class="note bad"><b>⚠ Fora do ponto programado</b><br>${S.match?'O ponto mais perto é o Nº '+esc(S.match.n)+' ('+esc(S.match.name)+'), a <b>'+fmtM(S.match.d)+'</b>':'Nenhum ponto programado por perto'} — tolerância ${tol} m. <b>Informe o motivo.</b></div>`;
+ let h=`<div class="grab" onclick="sheetSize()"></div>${st}`;
+ if(!S.inTol&&!S.semGps)h+=`<h3>Motivo da parada fora do ponto <span style="color:var(--bad)">*</span></h3><div class="mot">${[...AC.cfg.motivos,'Outros'].map(m=>`<label class="${S.motivo===m?'on':''}"><input type="radio" name="mot" value="${esc(m)}" ${S.motivo===m?'checked':''} onchange="STOP.motivo=this.value;render();nextTo(STOP.motivo==='Outros'?'#motTxt':'#stTipo')"> ${esc(m)}</label>`).join('')}</div>${S.motivo==='Outros'?`<label class="f" id="motTxt"><span>Descreva o motivo <i>*</i></span><input type="text" value="${esc(S.motivoTxt)}" oninput="STOP.motivoTxt=this.value" onchange="nextTo('#stTipo')"></label>`:''}`;
+ h+=`<h3 id="stTipo">Tipo de ponto</h3><div class="seg s2">${['Regular','Novo'].map(v=>`<label><input type="radio" name="tp" value="${v}" ${S.tipo===v?'checked':''} onchange="STOP.tipo=this.value;nextTo('#stPax')"><b>${v}</b></label>`).join('')}</div><small class="hint">Regular = ponto cadastrado na linha. Novo = parada em lugar que não é ponto da linha.</small>
+ <h3 id="stPax">Passageiros</h3><div class="g2"><div><b style="display:block;text-align:center;margin-bottom:4px">⬆ Embarcaram</b><div class="ctr"><button onclick="acCnt('emb',-1)" aria-label="Menos um embarque">−</button><output id="c_emb">${S.emb}</output><button onclick="acCnt('emb',1)" aria-label="Mais um embarque">+</button></div></div><div><b style="display:block;text-align:center;margin-bottom:4px">⬇ Desembarcaram</b><div class="ctr"><button onclick="acCnt('des',-1)" aria-label="Menos um desembarque">−</button><output id="c_des">${S.des}</output><button onclick="acCnt('des',1)" aria-label="Mais um desembarque">+</button></div></div></div>
+ <p class="small" style="text-align:center">A bordo depois desta parada: <b id="c_bordo">${Math.max(0,acBordo(AC)+S.emb-S.des)}</b></p>
+ <h3>Observação</h3><textarea rows="2" placeholder="ex.: passageiro pediu parada na esquina; ponto sem iluminação" oninput="STOP.obs=this.value">${esc(S.obs)}</textarea>
+ <h3>Foto (opcional)</h3><div class="photos" id="sph">${S.photo?'':'<div class="addph" onclick="$(\'sphIn\').click()">📷</div>'}</div><input type="file" id="sphIn" accept="image/*" capture="environment" hidden onchange="acPhoto(this.files[0]);this.value=''">
+ <div class="btns" style="margin-top:14px"><button onclick="STOP=null;go({v:'acRun'})">Cancelar</button><button class="ok" onclick="acStopSave()">💾 Salvar parada</button></div>`;$('sheet').innerHTML=h;if(S.photo)acPhotoShow();}
+function acCnt(k,d){STOP[k]=Math.max(0,(+STOP[k]||0)+d);$('c_'+k).textContent=STOP[k];$('c_bordo').textContent=Math.max(0,acBordo(AC)+STOP.emb-STOP.des);}
+async function acPhoto(f){if(!f)return;try{const d=await shrink(f);const id=uid('ph');await DB.set('ph:'+id,d);STOP.photo=id;acPhotoShow();}catch(e){toast('Foto não carregou: '+e.message,'warn');}}
+async function acPhotoShow(){const d=await DB.get('ph:'+STOP.photo);$('sph').innerHTML=d?`<div><img src="${d}" alt="foto da parada"><button title="Remover a foto" onclick="acPhotoRm()">✕</button></div>`:'';}
+function acPhotoRm(){STOP.photo='';$('sph').innerHTML='<div class="addph" onclick="$(\'sphIn\').click()">📷</div>';}
+function acStopSave(){const S=STOP;if(!S.inTol&&!S.semGps){if(!S.motivo){toast('Informe o motivo da parada fora do ponto.','warn');return;}if(S.motivo==='Outros'&&String(S.motivoTxt).trim().length<3){toast('Descreva o motivo em “Outros”.','warn');return;}}
+ AC.stops.push({...S,obs:S.obs.trim(),motivoTxt:S.motivoTxt.trim(),bordo:Math.max(0,acBordo(AC)+S.emb-S.des)});AC.log.push({at:S.at,t:'parada '+(S.inTol?'no ponto Nº '+S.match.n:'fora do ponto'+(S.motivo?' — '+S.motivo:''))});STOP=null;saveAll();toast('Parada registrada.','ok',2500);go({v:'acRun'});}
+/* ---------- encerramento ---------- */
+function acFinishAsk(){const r=acRoute(AC),miss=(r?.stops.length||0)-visited().size;if(!confirm('Finalizar a viagem agora?'+(miss>0?'\n'+miss+' ponto(s) programado(s) ainda sem parada registrada (contam como não atendidos).':'')))return;
+ AC.status='done';AC.nProg=r?.stops.length||0;AC.endAt=new Date().toISOString();AC.head.hFim=hhmm(AC.endAt);const o=AC.off.find(x=>!x.end);if(o)o.end=AC.endAt;AC.log.push({at:AC.endAt,t:'fim'});HIST.unshift(AC);const i=0;AC=null;wake(false);saveAll();go({v:'acEnd',h:i,ask:1});}
+/* 2.3: depois de finalizar, pergunta se envia; “não” pede confirmação e exclui do celular (com as fotos) */
+async function acAsk(x){const i=VIEW.h,a=HIST[i];if(!a)return go({v:'home'});
+ if(x==='sim'){go({...VIEW,ask:0});if(CONN)await acCloud(i);else await acExport(i,true);return;}
+ if(x==='nao')return go({...VIEW,ask:2});
+ if(x==='excluir'){for(const s of a.stops)if(s.photo)await DB.del('ph:'+s.photo);HIST.splice(i,1);FILA=FILA.filter(f=>f.ref?.ac!==a.id);await saveAll();toast('Acompanhamento excluído deste celular.','ok');go({v:'home'});}}
+/* envia o acompanhamento direto ao Rota Studio (sem internet, fica na fila) */
+async function acCloud(i){const a=HIST[i];if(!a||!CONN)return;const{data,name}=await acData(a);a.queued=true;await enviar(name,data,{ac:a.id});if(VIEW.v==='acEnd')render();}
+function acMetrics(a){const r=routeOf(pkgOf(a.route.pk),a.route.id),nProg=r?.stops.length||a.nProg||0;let emb=0,des=0,peak=0,b=0;for(const s of a.stops){emb+=+s.emb||0;des+=+s.des||0;b=Math.max(0,b+(+s.emb||0)-(+s.des||0));peak=Math.max(peak,b);}
+ const inT=a.stops.filter(s=>s.inTol).length,att=new Set(a.stops.filter(s=>s.inTol&&s.match).map(s=>s.match.i)).size,tm=a.stops.filter(s=>s.inTol&&s.prog).map(s=>{let d=minOf(s.real)-minOf(s.prog);if(d<-720)d+=1440;return d;});
+ const onTime=tm.filter(d=>Math.abs(d)<=5).length,avg=tm.length?tm.reduce((x,y)=>x+y,0)/tm.length:null;
+ const CKD=a.ckDef||CK,ckN=CKD.filter(c=>a.ck?.[c.k]).length,ckOkN=CKD.filter(c=>a.ck?.[c.k]&&ckOk(c,a.ck[c.k])).length,ckBad=CKD.filter(c=>a.ck?.[c.k]&&!ckOk(c,a.ck[c.k])).map(c=>c.l);
+ return{emb,des,peak,nStops:a.stops.length,inT,out:a.stops.filter(s=>!s.inTol&&!s.semGps).length,semGps:a.stops.filter(s=>s.semGps).length,nProg,att,miss:Math.max(0,nProg-att),tmN:tm.length,onTime,avg,dur:a.endAt?Date.parse(a.endAt)-Date.parse(a.startAt):0,ckN,ckOkN,ckBad,off:a.off.length,motivos:a.stops.filter(s=>s.motivo).reduce((m,s)=>{const k=s.motivo==='Outros'?'Outros: '+s.motivoTxt:s.motivo;m[k]=(m[k]||0)+1;return m;},{})};}
+function acEndView(){const a=HIST[VIEW.h];if(!a)return go({v:'home'});const m=acMetrics(a);setHead('Fechamento da viagem',a.head.linha+' · '+a.head.sentido);$('sheet').classList.add('full');
+ if(MAP){const pk=pkgOf(a.route.pk),r=routeOf(pk,a.route.id);if(r)drawRoute(pk,r);const AC0=AC;AC=a;drawStopsAc();drawTrail();AC=AC0;}
+ const pct=(x,n)=>n?Math.round(x/n*100)+'%':'—',dest=CONN?'ao Rota Studio':'(arquivo para o computador)';
+ const ask=VIEW.ask===1?`<div class="note ok" style="font-size:15px"><b>Enviar este acompanhamento ${dest}?</b><div class="btns" style="margin-bottom:0"><button class="ok" onclick="acAsk('sim')">☁ Sim, enviar</button><button class="bad" onclick="acAsk('nao')">Não enviar</button></div></div>`
+  :VIEW.ask===2?`<div class="note bad" style="font-size:15px"><b>Tem certeza?</b> Sem enviar, este acompanhamento será <b>excluído</b> deste celular e não poderá ser recuperado.<div class="btns" style="margin-bottom:0"><button class="ok" onclick="acAsk('sim')">☁ Enviar</button><button class="bad" onclick="acAsk('excluir')">Sim, excluir</button></div></div>`:'';
+ $('sheet').innerHTML=`<div class="grab" onclick="sheetSize()"></div>${ask}<h2>${esc(a.head.linha)} · ${esc(a.head.sentido)}</h2><p class="small mut" style="margin-top:-4px">${esc(fdt(a.head.data))} · ${esc(a.head.hIni)}–${esc(a.head.hFim)} · ${a.mode==='A'?'Modo A (com o motorista)':'Modo B (individual, '+esc(a.head.veic)+')'} · ${esc(a.head.acomp)} (mat. ${esc(a.head.matAcomp)})</p>
+ <div class="kpis"><div><b>${m.emb}</b><span>embarques</span></div><div><b>${m.des}</b><span>desembarques</span></div><div><b>${m.peak}</b><span>pico de lotação a bordo</span></div><div><b>${durTxt(m.dur)}</b><span>tempo total de viagem</span></div>
+ <div class="ok"><b>${m.inT}</b><span>paradas no ponto correto</span></div><div class="${m.out?'bad':''}"><b>${m.out}</b><span>paradas fora do ponto (desvio)</span></div>
+ <div class="${m.miss?'bad':''}"><b>${m.att} de ${m.nProg}</b><span>pontos programados atendidos</span></div><div class="${m.off?'bad':''}"><b>${m.off}</b><span>saída(s) do traçado planejado</span></div>
+ <div><b>${m.tmN?pct(m.onTime,m.tmN):'—'}</b><span>pontualidade (±5 min)${m.avg!=null?' · média '+(m.avg>0?'+':'')+Math.round(m.avg)+' min':''}</span></div>
+ <div class="${a.ckSkip?'':m.ckBad.length?'bad':'ok'}"><b>${a.mode==='B'?'—':a.ckSkip?'dispensado':m.ckOkN+' de '+m.ckN}</b><span>checklist conforme</span></div></div>
+ ${a.ckSkip?`<div class="note warn"><b>Checklist dispensado:</b> ${esc(a.ckSkip.why)}</div>`:m.ckBad.length?`<div class="note bad"><b>Não conforme:</b> ${m.ckBad.map(esc).join(' · ')}</div>`:''}
+ ${Object.keys(m.motivos).length?`<h3>Motivos das paradas fora do ponto</h3>${Object.entries(m.motivos).map(([k,n])=>`<div class="small">• ${esc(k)} <b>(${n})</b></div>`).join('')}`:''}
+ <h3>Paradas</h3>${a.stops.map((s,i)=>`<div class="card" style="cursor:default"><span class="num" style="background:${s.inTol?'var(--ok)':s.semGps?'#64748b':'var(--bad)'}">${i+1}</span><div class="grow" style="min-width:0"><b>${s.inTol?'Nº '+esc(s.match.n)+' · '+esc(s.match.name):s.semGps?'Sem GPS':'Fora do ponto'+(s.match?' (a '+fmtM(s.match.d)+' do Nº '+esc(s.match.n)+')':'')}</b><small>⬆ ${s.emb} · ⬇ ${s.des} · a bordo ${s.bordo}${s.motivo?' · '+esc(s.motivo==='Outros'?s.motivoTxt:s.motivo):''}${s.obs?' · '+esc(s.obs):''}${s.photo?' · 📷':''}</small></div><div class="tm">${esc(s.real)}${s.prog?'<br><small>prog. '+esc(s.prog)+'</small>':''}</div></div>`).join('')||'<p class="small mut">Nenhuma parada registrada.</p>'}
+ <div class="btns one" style="margin-top:12px">${CONN?`<button class="ok" onclick="acCloud(${VIEW.h})" ${a.sent?'disabled':''}>${a.sent?'☁ Entregue ao Rota Studio':a.queued?'☁ Na fila — tentar enviar de novo':'☁ Enviar direto ao Rota Studio'}</button>`:''}<button class="p" onclick="acExport(${VIEW.h},true)">📤 Exportar / Compartilhar acompanhamento</button><button onclick="acExport(${VIEW.h},false)">⬇ Salvar arquivo no celular</button><button onclick="acWhats(${VIEW.h})">💬 Enviar resumo pelo WhatsApp</button><button onclick="go({v:'home'})">Concluir</button></div>
+ <p class="small mut">No computador, no Rota Studio: <b>Importar</b> e escolha o arquivo — o acompanhamento entra com 1 clique.${a.sent?' Enviado em '+new Date(a.sent).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})+'.':''}</p>`;}
+/* resumo legível (WhatsApp/e-mail) */
+function acText(a){const m=acMetrics(a);return [`*Acompanhamento de linha* — ${a.head.linha} ${a.head.sentido}`,`${fdt(a.head.data)} · ${a.head.hIni}–${a.head.hFim} (${durTxt(m.dur)})`,a.mode==='A'?`Modo A · carro ${a.head.carro} · motorista ${a.head.motorista} (mat. ${a.head.matMot})`:`Modo B · individual (${a.head.veic})`,`Acompanhante: ${a.head.acomp} (mat. ${a.head.matAcomp})`,'',
+ `Paradas: ${m.nStops} — ${m.inT} no ponto, ${m.out} fora do ponto${m.semGps?', '+m.semGps+' sem GPS':''}`,`Pontos programados atendidos: ${m.att} de ${m.nProg}`,`Embarques ${m.emb} · Desembarques ${m.des} · Pico a bordo ${m.peak}`,m.tmN?`Pontualidade: ${m.onTime} de ${m.tmN} no horário (±5 min)${m.avg!=null?' · média '+(m.avg>0?'+':'')+Math.round(m.avg)+' min':''}`:'',m.off?`Saídas do traçado planejado: ${m.off}`:'',
+ a.mode==='A'?(a.ckSkip?`Checklist dispensado: ${a.ckSkip.why}`:`Checklist: ${m.ckOkN} de ${m.ckN} conforme${m.ckBad.length?' — não conforme: '+m.ckBad.join(', '):''}`):'',...Object.entries(m.motivos).map(([k,n])=>`• Fora do ponto: ${k} (${n})`)].filter(x=>x!=='').join('\n');}
+async function acData(a){const stops=[];for(const s of a.stops)stops.push({...s,photo:s.photo?(await DB.get('ph:'+s.photo))||'':''});const r=routeOf(pkgOf(a.route.pk),a.route.id);
+ const data={kind:'rota-studio-acomp',v:1,app:APP,made:new Date().toISOString(),acomp:{...a,stops,nProg:r?.stops.length||a.nProg||0,prog:(r?.stops||[]).map((s,k)=>({i:k,n:s.n||k+1,name:s.name,pid:s.pid||'',lat:s.lat,lon:s.lon,t:s.t||''})),line:r?.line||'',metrics:acMetrics(a),text:acText(a)}};
+ const name='Acompanhamento_'+String(a.head.linha).replace(/[^\wÀ-ú]+/g,'_')+'_'+a.head.sentido+'_'+a.head.data+'_'+a.head.hIni.replace(':','h')+'.json';
+ return{data,name};}
+async function acExport(i,share){const a=HIST[i];if(!a)return;const{data,name}=await acData(a);
+ if(!await shareFile(data,name,share,'Acompanhamento '+a.head.linha+' '+a.head.sentido,acText(a)))return;a.sent=new Date().toISOString();await saveAll();toast('Acompanhamento pronto para o computador.','ok');render();}
+function acWhats(i){const a=HIST[i];if(a)window.open('https://wa.me/?text='+encodeURIComponent(acText(a)),'_blank');}
+async function boot(){await DB.open();PKGS=(await DB.get('pkgs'))||[];RES=(await DB.get('res'))||{};ME=(await DB.get('me'))||'';MAT=(await DB.get('mat'))||'';AC=(await DB.get('ac'))||null;HIST=(await DB.get('hist'))||[];CONN=(await DB.get('conn'))||null;FILA=(await DB.get('fila'))||[];initMap();
+ $('btnBack').onclick=()=>{FORM=null;const v=VIEW.v;if(v==='form')go({...VIEW,v:'point'});else if(v==='point'&&VIEW.r!=='§novos')go({v:'route',pk:VIEW.pk,r:VIEW.r});else if(v==='route'||v==='send')go({v:'vist'});else if(v==='acStop'){STOP=null;go({v:'acRun'});}else if(v==='acHead')go({v:'acNew'});else go({v:'home'});};
+ $('btnLayer').onclick=toggleTiles;$('btnGps').onclick=()=>gpsToggle();$('file').onchange=e=>{openFile(e.target.files[0]);e.target.value='';};
+ window.addEventListener('beforeunload',e=>{if((pendingExport()||AC)&&DB.mode==='mem'){e.preventDefault();e.returnValue='';}});
+ if(AC&&AC.status==='run'){go({v:'acRun'});toast('Acompanhamento em andamento retomado.','ok');}else render();if(CONN)campoSync(false);}
+/* ---------- conexão com o Rota Studio (Apps Script do link): a base chega sozinha e os resultados vão direto ---------- */
+const connUrl=q=>CONN.url+(CONN.url.includes('?')?'&':'?')+q;
+function campoConnect(){const c=prompt('Cole o código de conexão (computador: Rota Studio → Acompanhamentos → Sincronização com o celular → Copiar).\nDeixe em branco para desconectar.','');if(c===null)return;
+ if(!c.trim()){CONN=null;saveAll();render();toast('Celular desconectado do Rota Studio.','ok');return;}
+ let t=c.trim();if(/^RSC2-/.test(t)){try{const b=t.slice(5).replace(/\s+/g,'');t='RSC1|'+atob(b+'='.repeat((4-b.length%4)%4));}catch{t='';}}
+ const m=/^RSC1\|(https:\/\/script\.google(?:usercontent)?\.com\/[^|\s]+)\|([0-9a-f]{16,64})$/i.exec(t);if(!m){toast('Código inválido: copie de novo no Rota Studio (Acompanhamentos → 📋 Copiar) e cole aqui, sem abrir como link.','bad',8000);return;}
+ CONN={url:m[1],key:m[2],at:''};saveAll();campoSync(true);}
+async function campoSync(manual){if(!CONN)return;if(!navigator.onLine){if(manual)toast('Sem internet agora: a base fica como está e os envios esperam na fila.','warn');return;}
+ try{const r=await fetch(connUrl('campo=pacote&t='+encodeURIComponent(CONN.key)));const d=await r.json();if(d.ok===false)throw new Error(d.erro||'erro do Rota Studio');if(d.kind!=='rota-studio-campo'||!Array.isArray(d.routes))throw new Error('resposta inesperada');
+  await loadPkg({...d,auto:true});CONN.at=new Date().toISOString();await saveAll();if(manual)toast('Base atualizada: '+d.routes.length+' viagem(ns) vigente(s).','ok');if(['home','vist'].includes(VIEW.v))render();}
+ catch(e){if(manual)toast('Não consegui buscar a base: '+e.message,'bad',8000);}await flush();}
+async function enviar(nome,dados,ref){FILA.push({nome,dados,ref:ref||null,at:new Date().toISOString()});await saveAll();return flush();}
+let FLUSHING=false;
+async function flush(){if(!CONN||!FILA.length||FLUSHING||!navigator.onLine)return !FILA.length;FLUSHING=true;let ok=0;
+ try{while(FILA.length){const it=FILA[0];const r=await fetch(CONN.url,{method:'POST',body:JSON.stringify({t:CONN.key,nome:it.nome,dados:it.dados})});const d=await r.json().catch(()=>({ok:false,erro:'resposta inválida'}));if(!d.ok)throw new Error(d.erro||'falhou');
+  FILA.shift();ok++;const now=new Date().toISOString();if(it.ref?.ac){const h=HIST.find(x=>x.id===it.ref.ac);if(h)h.sent=now;}for(const k of it.ref?.vist||[])if(RES[k])RES[k].sent=now;await saveAll();}}
+ catch(e){toast('Envio ao Rota Studio pendente ('+e.message+'). Tento de novo quando houver internet.','warn',7000);}finally{FLUSHING=false;}
+ if(ok){toast(ok+' envio(s) entregue(s) ao Rota Studio.','ok');if(['home','acEnd','vist'].includes(VIEW.v))render();}return !FILA.length;}
+window.addEventListener('online',()=>flush());
+document.addEventListener('DOMContentLoaded',boot);
+</script>
+</body></html>
