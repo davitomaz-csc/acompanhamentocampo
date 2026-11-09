@@ -112,7 +112,7 @@ details.help{background:#eef6fb;border-radius:12px;padding:8px 12px;margin:8px 0
  Modo B (acompanhamento individual de carro ou ônibus). GPS contínuo, paradas com raio de tolerância, embarques/desembarques,
  fechamento com métricas e arquivo para importar no computador. Vistoria de pontos: checklist, fotos e posição pelo GPS.
  Tudo fica guardado no próprio celular até ser enviado. */
-const APP='Estúdio de Rotas Campo 2.8 · by Davi';
+const APP='Estúdio de Rotas Campo 2.8.1 · by Davi';
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const uid=(p='i')=>p+Date.now().toString(36).slice(-6)+Math.random().toString(36).slice(2,6);
@@ -404,7 +404,7 @@ async function saveForm(){const pk=pkgOf(VIEW.pk),s=curStop();if(!s)return;const
  if(pv&&!await modal(`<h3>Substituir a vistoria?</h3><p>Este ponto já tem vistoria de segurança: <b>${esc(clsOf(pv)[0])}</b> · ${esc(verTxt(pv))}.</p><p class="small mut">A nova vistoria passa a valer; a anterior fica registrada no histórico do relatório.</p>`,[{t:'Substituir',c:'p',v:true},{t:'Cancelar',v:false}])){toast('Vistoria não salva — a anterior continua valendo.','warn');return;}
  const base=pv?(pv.ver?.length?pv.ver:[{v:1,by:pv.by||'',mat:pv.mat||'',at:pv.at}]):old?.ver?.length?old.ver.slice(0,-1):[],ver=[...base,{v:base.length+1,by:ME||'campo',mat:MAT||'',at:now}];
  const it={id:pv?uid('vi'):old?.id||uid('vi'),key:stopKey(s),pid:s.pid||'',name:s.name,lat:s.lat,lon:s.lon,result:F.cls==='adequado'?'aprovado':F.cls==='nao_recomendado'?'reprovado':'ressalva',checks,notes:sst.obs,photos:F.photos,pos:F.usePos?F.pos:null,at:now,by:ME||'campo',mat:MAT||'',ver,subst:pv?.id||'',route:VIEW.r,pkg:pk.id,novo:!!s.novo,sst};
- RES[it.key]=it;if(s.novo&&VIEW.r==='§novos'){pk.novos=pk.novos||[];if(!pk.novos.some(n=>n.key===s.key))pk.novos.push(s);}FORM=null;await saveAll();toast('✓ Vistoria de segurança salva no celular: '+SST_CLS[sst.cls][0]+'.','ok');
+ RES[it.key]=it;if(s.novo&&VIEW.r==='§novos'){pk.novos=pk.novos||[];if(!pk.novos.some(n=>n.key===s.key))pk.novos.push(s);}FORM=null;await saveAll();toast('✓ Vistoria de segurança salva'+(CONN?' e enviada ao Estúdio de Rotas':' no celular')+': '+SST_CLS[sst.cls][0]+'.','ok');if(CONN)vistSend([it.key]);
  if(VIEW.r==='§novos')return go({v:'vist'});const list=VIEW.r==='§avulsos'?pk.points:routeOf(pk,VIEW.r).stops;const nx=list.findIndex((x,i)=>i>VIEW.i&&needs(x)&&!resOf(x));go(nx>=0?{...VIEW,v:'point',i:nx}:{...VIEW,v:'point'});}
 /* novo ponto proposto em campo */
 function novoPonto(){if(!GPS){gpsToggle(true);toast('Ligando o GPS… toque de novo em “Novo ponto aqui” quando a posição aparecer.','',6000);return;}const nm=prompt('Nome / referência do novo ponto (ex.: R. do Jambo, em frente à escola):','');if(nm===null)return;const pk=PKGS[0]||(()=>{const p={id:uid('pk'),title:'Pontos novos de campo',made:new Date().toISOString(),routes:[],points:[],checks:DEF_CHECKS};PKGS.push(p);return p;})();
@@ -716,8 +716,15 @@ function campoConnect(){const c=prompt('Cole o código de conexão (computador: 
 async function campoSync(manual){if(!CONN)return;if(!navigator.onLine){if(manual)toast('Sem internet agora: a base fica como está e os envios esperam na fila.','warn');return;}
  try{const r=await fetch(connUrl('campo=pacote&t='+encodeURIComponent(CONN.key)));const d=await r.json();if(d.ok===false)throw new Error(d.erro||'erro do Estúdio de Rotas');if(d.kind!=='rota-studio-campo'||!Array.isArray(d.routes))throw new Error('resposta inesperada');
   await loadPkg({...d,auto:true});CONN.at=new Date().toISOString();await saveAll();if(manual)toast('Base atualizada: '+d.routes.length+' viagem(ns) vigente(s).','ok');if(['home','vist'].includes(VIEW.v))render();}
- catch(e){if(manual)toast('Não consegui buscar a base: '+e.message,'bad',8000);}await flush();}
+ catch(e){if(manual)toast('Não consegui buscar a base: '+e.message,'bad',8000);}const pend=Object.values(RES).filter(x=>!x.sent&&x.sst&&!FILA.some(f=>f.ref?.vist?.includes(x.key))).map(x=>x.key);if(pend.length)await vistSend(pend);await flush();}
+/* 2.8.1: base atualizada a cada 2 min com o app aberto (e ao voltar para o app), para ver o que foi lançado no computador */
+setInterval(()=>{if(CONN&&!document.hidden&&!['form','acRun'].includes(VIEW.v))campoSync(false);},120000);
+document.addEventListener('visibilitychange',()=>{if(CONN&&!document.hidden&&!['form','acRun'].includes(VIEW.v))campoSync(false);});
 /* 2.4.1: o mesmo acompanhamento enviado de novo substitui o que estava na fila (evita arquivo “(1)” no computador) */
+/* 2.8.1: vistoria vai sozinha ao Estúdio de Rotas (um arquivo por ponto: reeditar antes do envio só troca o arquivo da fila) */
+async function vistSend(keys){const items=[];for(const k of keys){const x=RES[k];if(!x)continue;const photos=[];for(const id of x.photos||[]){const d=await DB.get('ph:'+id);if(d)photos.push(d);}items.push({...x,photos});}if(!items.length)return;
+ const nome='Vistoria_'+(ME||'campo').replace(/[^\wÀ-ú]+/g,'_')+'_'+(keys.length>1?new Date().toISOString().slice(0,16).replace(/[:T]/g,'-'):keys[0].replace(/[^\w]+/g,'_'))+'.json';
+ return enviar(nome,{kind:'rota-studio-vistorias',v:1,app:APP,made:new Date().toISOString(),by:ME||'campo',items},{vist:items.map(x=>x.key)});}
 async function enviar(nome,dados,ref){FILA=FILA.filter(f=>f.nome!==nome&&!(ref?.ac&&f.ref?.ac===ref.ac));FILA.push({nome,dados,ref:ref||null,at:new Date().toISOString()});await saveAll();return flush();}
 let FLUSHING=false;
 async function flush(){if(!CONN||!FILA.length||FLUSHING||!navigator.onLine)return !FILA.length;FLUSHING=true;let ok=0;
