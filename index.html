@@ -112,7 +112,7 @@ details.help{background:#eef6fb;border-radius:12px;padding:8px 12px;margin:8px 0
  Modo B (acompanhamento individual de carro ou ônibus). GPS contínuo, paradas com raio de tolerância, embarques/desembarques,
  fechamento com métricas e arquivo para importar no computador. Vistoria de pontos: checklist, fotos e posição pelo GPS.
  Tudo fica guardado no próprio celular até ser enviado. */
-const APP='Estúdio de Rotas Campo 2.8.1 · by Davi';
+const APP='Estúdio de Rotas Campo 2.8.2 · by Davi';
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const uid=(p='i')=>p+Date.now().toString(36).slice(-6)+Math.random().toString(36).slice(2,6);
@@ -335,7 +335,7 @@ function sstPageHtml(d){const v=d.v,o=v?.sst,line=d.line;
  <div class="ev"><b>📷 Evidências:</b> ${v.np||0} foto(s) do ponto${ph.length>1?ph.slice(1).map(t=>`<img src="${t}" alt="Foto">`).join(''):''}${vl}</div>${foot}</section>`;}
 function sstDocHtml(title,pages,col,fonts){col=col||pubCfg().color||'#0f3b5f';fonts=fonts??PUB_FONTS;
  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title>${fonts}<style>
-*{box-sizing:border-box}body{margin:0;background:#e9edf2;font:11px/1.35 Barlow,Arial,sans-serif;color:#15202b}.pg{width:297mm;min-height:210mm;margin:10px auto;background:#fff;padding:7mm 8mm;box-shadow:0 2px 14px #0002;display:flex;flex-direction:column;gap:6px;page-break-after:always}
+*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}body{margin:0;background:#e9edf2;font:11px/1.35 Barlow,Arial,sans-serif;color:#15202b}.pg{width:297mm;min-height:210mm;margin:10px auto;background:#fff;padding:7mm 8mm;box-shadow:0 2px 14px #0002;display:flex;flex-direction:column;gap:6px;page-break-after:always}
 header{display:flex;align-items:center;gap:10px;border-bottom:3px solid ${col};padding-bottom:5px}header img{height:34px;max-width:140px;object-fit:contain}header .t{flex:1}h1{font:700 19px "Barlow Condensed",Arial;margin:0;color:${col}}header small{color:#55616e}
 .box{border:1px solid #d6dde6;border-radius:8px;overflow:hidden}.box h2{margin:0;background:${col};color:#fff;font:700 12.5px "Barlow Condensed",Arial;letter-spacing:.04em;text-transform:uppercase;padding:4px 8px}
 .r1{display:grid;grid-template-columns:24% 34% 1fr;gap:6px}.r1.rp{grid-template-columns:24% 1fr}.r2{display:grid;grid-template-columns:54% 1fr;gap:6px}.col{display:flex;flex-direction:column;gap:6px}
@@ -431,7 +431,7 @@ async function openFile(f){if(!f)return;let d;try{d=JSON.parse(await f.text());}
  if(d?.kind==='rota-studio-vistorias'||d?.kind==='rota-studio-acomp'){toast('Este é um arquivo de resultado — importe no computador, no Estúdio de Rotas.','warn',7000);return;}
  if(d?.kind!=='rota-studio-campo'||!Array.isArray(d.routes)){toast('Este arquivo não é um pacote de campo do Estúdio de Rotas.','bad');return;}
  const pk=await loadPkg(d);toast('Pacote aberto: '+pk.routes.length+' rota(s), '+(d.count||0)+' ponto(s) a vistoriar.','ok');go({v:'home'});}
-async function loadPkg(d){const id=d.auto?'auto':'pk'+(d.made||'')+(d.title||'');const old=PKGS.findIndex(p=>p.id===id);const pk={id,title:d.title,made:d.made,by:d.by,routes:d.routes,points:d.points||[],checks:Array.isArray(d.checks)&&d.checks.length?d.checks:DEF_CHECKS,acomp:{...AC_DEF,...(d.acomp||{})},garage:d.garage||null};
+async function loadPkg(d){const id=d.auto?'auto':'pk'+(d.made||'')+(d.title||'');const old=PKGS.findIndex(p=>p.id===id);const pk={id,title:d.title,made:d.made,by:d.by,routes:d.routes,points:d.points||[],checks:Array.isArray(d.checks)&&d.checks.length?d.checks:DEF_CHECKS,acomp:{...AC_DEF,...(d.acomp||{})},garage:d.garage||null,vis:d.vis||{},pub:d.pub||null};
  if(old>=0)PKGS[old]=pk;else PKGS.unshift(pk);if(!ME&&d.by&&!d.auto)ME=d.by;await saveAll();return pk;}
 async function clearPkgs(){const pend=pendingExport();if(pend&&!confirm(pend+' vistoria(s) ainda não foram enviadas. Remover os pacotes mesmo assim? (As vistorias continuam guardadas.)'))return;if(AC&&AC.status==='run'){toast('Há um acompanhamento em andamento: finalize antes de remover os pacotes.','warn');return;}if(!confirm('Remover todos os pacotes deste celular?'))return;PKGS=[];await saveAll();go({v:'home'});}
 function setMe(){const n=prompt('Seu nome (aparece nas vistorias e nos acompanhamentos):',ME||'');if(n===null)return;ME=n.trim();const m=prompt('Sua matrícula:',MAT||'');if(m!==null)MAT=m.trim();saveAll();render();}
