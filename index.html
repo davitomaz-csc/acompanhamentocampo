@@ -112,7 +112,7 @@ details.help{background:#eef6fb;border-radius:12px;padding:8px 12px;margin:8px 0
  Modo B (acompanhamento individual de carro ou ônibus). GPS contínuo, paradas com raio de tolerância, embarques/desembarques,
  fechamento com métricas e arquivo para importar no computador. Vistoria de pontos: checklist, fotos e posição pelo GPS.
  Tudo fica guardado no próprio celular até ser enviado. */
-const APP='Estúdio de Rotas Campo 2.8.3 · by Davi';
+const APP='Estúdio de Rotas Campo 2.9 · by Davi';
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const uid=(p='i')=>p+Date.now().toString(36).slice(-6)+Math.random().toString(36).slice(2,6);
@@ -714,11 +714,12 @@ function campoConnect(){const c=prompt('Cole o código de conexão (computador: 
  const m=/^RSC1\|(https:\/\/script\.google(?:usercontent)?\.com\/[^|\s]+)\|([0-9a-f]{16,64})$/i.exec(t);if(!m){toast('Código inválido: copie de novo no Estúdio de Rotas (Acompanhamentos → 📋 Copiar) e cole aqui, sem abrir como link.','bad',8000);return;}
  CONN={url:m[1],key:m[2],at:''};saveAll();campoSync(true);}
 async function campoSync(manual){if(!CONN)return;if(!navigator.onLine){if(manual)toast('Sem internet agora: a base fica como está e os envios esperam na fila.','warn');return;}
- try{const r=await fetch(connUrl('campo=pacote&t='+encodeURIComponent(CONN.key)));const d=await r.json();if(d.ok===false)throw new Error(d.erro||'erro do Estúdio de Rotas');if(d.kind!=='rota-studio-campo'||!Array.isArray(d.routes))throw new Error('resposta inesperada');
-  await loadPkg({...d,auto:true});CONN.at=new Date().toISOString();await saveAll();if(manual)toast('Base atualizada: '+d.routes.length+' viagem(ns) vigente(s).','ok');if(['home','vist'].includes(VIEW.v))render();}
- catch(e){if(manual)toast('Não consegui buscar a base: '+e.message,'bad',8000);}const pend=Object.values(RES).filter(x=>!x.sent&&x.sst&&!FILA.some(f=>f.ref?.vist?.includes(x.key))).map(x=>x.key);if(pend.length)await vistSend(pend);await flush();}
+ try{/* 2.9: só baixa a base quando ela mudou (consulta leve a cada 30 s) */let pv='';if(!manual){const x=await fetch(connUrl('campo=pacote-ver&t='+encodeURIComponent(CONN.key))).then(r=>r.json()).catch(()=>null);if(x?.ok&&x.at){if(x.at===CONN.pv)throw 0;pv=x.at;}}
+  const r=await fetch(connUrl('campo=pacote&t='+encodeURIComponent(CONN.key)));const d=await r.json();if(d.ok===false)throw new Error(d.erro||'erro do Estúdio de Rotas');if(d.kind!=='rota-studio-campo'||!Array.isArray(d.routes))throw new Error('resposta inesperada');
+  await loadPkg({...d,auto:true});CONN.at=new Date().toISOString();CONN.pv=pv||'';await saveAll();if(manual)toast('Base atualizada: '+d.routes.length+' viagem(ns) vigente(s).','ok');if(['home','vist'].includes(VIEW.v))render();}
+ catch(e){if(manual&&e)toast('Não consegui buscar a base: '+e.message,'bad',8000);}const pend=Object.values(RES).filter(x=>!x.sent&&x.sst&&!FILA.some(f=>f.ref?.vist?.includes(x.key))).map(x=>x.key);if(pend.length)await vistSend(pend);await flush();}
 /* 2.8.1: base atualizada a cada 2 min com o app aberto (e ao voltar para o app), para ver o que foi lançado no computador */
-setInterval(()=>{if(CONN&&!document.hidden&&!['form','acRun'].includes(VIEW.v))campoSync(false);},120000);
+setInterval(()=>{if(CONN&&!document.hidden&&!['form','acRun'].includes(VIEW.v))campoSync(false);},30000);
 document.addEventListener('visibilitychange',()=>{if(CONN&&!document.hidden&&!['form','acRun'].includes(VIEW.v))campoSync(false);});
 /* 2.4.1: o mesmo acompanhamento enviado de novo substitui o que estava na fila (evita arquivo “(1)” no computador) */
 /* 2.8.1: vistoria vai sozinha ao Estúdio de Rotas (um arquivo por ponto: reeditar antes do envio só troca o arquivo da fila) */
