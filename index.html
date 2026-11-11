@@ -94,8 +94,22 @@ details.help{background:#eef6fb;border-radius:12px;padding:8px 12px;margin:8px 0
 @media(max-width:359px){.pills{grid-template-columns:1fr}.runbar{grid-template-columns:1fr 1fr}.runbar .stop{grid-column:1/-1}}
 @media(prefers-reduced-motion:reduce){#sheet,.mbox{animation:none}.hud,.pill{transition:none}}
 @media(min-width:900px){#sheet{top:var(--hh,52px);bottom:0;right:auto;width:420px;max-height:none!important;border-radius:0;overflow:auto}#map{left:420px}.grab{display:none}.toast{left:calc(50% + 210px)}.hud,.banner{left:420px}.runbar{left:auto;width:420px;right:0}}
+.ovl{position:fixed;inset:0;z-index:100000;background:rgba(15,23,42,.88);display:grid;place-items:center;padding:16px}.obox{background:#fff;color:var(--ink);width:min(440px,100%);border-radius:16px;padding:20px;max-height:92vh;overflow:auto;box-shadow:0 20px 60px #0008}.obox h2{font-size:19px;margin:0 0 8px}.obox label{display:block;margin:10px 0}.obox label span{display:block;font-size:12.5px;color:var(--mut);margin-bottom:4px}.obox input{width:100%;padding:11px 12px;border:1px solid #c9d3df;border-radius:10px;font-size:16px}
+#dnav{display:none}header .sp{display:none}
+header .stpill{border-radius:999px;min-height:34px;padding:5px 12px;font-size:13px;font-weight:700;display:inline-flex;align-items:center;gap:5px;color:#fff;white-space:nowrap}.stpill .sl{display:none}
+header .stpill.ok{background:#15803d}header .stpill.wait{background:#0e7490}header .stpill.run{background:#b45309}header .stpill.bad{background:#b91c1c;animation:stp 1.4s ease-out 3}
+@keyframes stp{0%{box-shadow:0 0 0 0 #fca5a5cc}80%{box-shadow:0 0 0 8px #fca5a500}}
+.card.env{align-items:flex-start;cursor:default}.card.env .num{font-size:11px}.eact{display:flex;flex-direction:column;gap:4px;flex-shrink:0}
+@media(min-width:700px){.stpill .sl{display:inline}}
+@media(prefers-reduced-motion:reduce){header .stpill.bad{animation:none}}
+/* 2.10 — computador (SESMT revisando e enviando vistorias): painel largo à esquerda, mapa à direita, menu no topo */
+@media(min-width:1100px){:root{--pw:clamp(480px,36vw,620px)}
+ #sheet{width:var(--pw);padding:18px 28px 28px;border-right:1px solid var(--line);box-shadow:none}#map{left:var(--pw)}.hud,.banner{left:var(--pw)}.runbar{width:var(--pw)}.toast{left:calc(50% + var(--pw) / 2)}
+ header h1{flex:0 1 auto;max-width:30vw}header .sp{display:block;flex:1}
+ #dnav{display:flex;gap:2px;align-items:center;margin-left:12px}#dnav button{background:transparent;color:#c7dcec;min-height:36px;padding:6px 14px;border-radius:9px;font-size:14px;font-weight:600}#dnav button:hover{background:#ffffff14;color:#fff}#dnav button[aria-current=page]{background:#ffffff26;color:#fff}
+ #sheet h2{font-size:18px}.card{padding:12px 16px}.card b{font-size:15px}.card:hover{border-color:#b9c7d6}.note{font-size:14px}}
 </style></head><body>
-<header><button id="btnBack" hidden aria-label="Voltar">←</button><h1 id="hTitle">Estúdio de Rotas Campo</h1><button onclick="document.getElementById('file').click()" title="Abrir pacote" aria-label="Abrir pacote">📂</button></header>
+<header><button id="btnBack" hidden aria-label="Voltar">←</button><h1 id="hTitle">Estúdio de Rotas Campo</h1><nav id="dnav" aria-label="Seções"><button data-go="home" onclick="go({v:'home'})">Início</button><button data-go="vist" onclick="go({v:'vist'})">Vistoriar pontos</button><button data-go="envios" onclick="go({v:'envios'})">Envios</button></nav><span class="sp"></span><button id="btnSt" class="stpill" hidden onclick="go({v:'envios'})"></button><button onclick="document.getElementById('file').click()" title="Abrir pacote" aria-label="Abrir pacote">📂</button></header>
 <div id="map"></div>
 <button id="btnLayer" class="layerbtn">🛰 Satélite</button><button id="btnGps" class="gpsbtn">📍 GPS</button>
 <div id="hud" class="hud" hidden></div><div id="banner" class="banner" hidden></div>
@@ -112,7 +126,7 @@ details.help{background:#eef6fb;border-radius:12px;padding:8px 12px;margin:8px 0
  Modo B (acompanhamento individual de carro ou ônibus). GPS contínuo, paradas com raio de tolerância, embarques/desembarques,
  fechamento com métricas e arquivo para importar no computador. Vistoria de pontos: checklist, fotos e posição pelo GPS.
  Tudo fica guardado no próprio celular até ser enviado. */
-const APP='Estúdio de Rotas Campo 2.9.1 · by Davi';
+const APP='Estúdio de Rotas Campo 2.10 · by Davi';
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const uid=(p='i')=>p+Date.now().toString(36).slice(-6)+Math.random().toString(36).slice(2,6);
@@ -164,7 +178,7 @@ const CK=[
  {k:'roleta',l:'Roleta travada',t:'opt',o:['Não','Sim'],ok:['Não'],h:'A roleta está travando a passagem? “Sim” = não conforme.'},
  {k:'visor',l:'Visor de velocidade',t:'opt',o:['Sim','Não'],ok:['Sim'],h:'O visor de velocidade para os passageiros está funcionando?'},
  {k:'calco',l:'Calço',t:'opt',o:['Completo (calço e corrente)','Incompleto','Não possui'],ok:['Completo (calço e corrente)'],desc:'Incompleto',h:'Calço de roda com corrente. Se estiver incompleto, descreva o que falta.'}];
-const saveAll=()=>Promise.all([DB.set('pkgs',PKGS),DB.set('res',RES),DB.set('me',ME),DB.set('mat',MAT),DB.set('ac',AC),DB.set('hist',HIST),DB.set('conn',CONN),DB.set('fila',FILA)]).catch(e=>toast('Não foi possível guardar no celular: '+e.message+'. Envie o resultado antes de fechar.','bad',9000));
+const saveAll=()=>Promise.all([DB.set('pkgs',PKGS),DB.set('res',RES),DB.set('me',ME),DB.set('mat',MAT),DB.set('ac',AC),DB.set('hist',HIST),DB.set('conn',CONN),DB.set('fila',FILA),DB.set('ident',IDENT)]).catch(e=>toast('Não foi possível guardar no celular: '+e.message+'. Envie o resultado antes de fechar.','bad',9000));
 const pkgOf=id=>PKGS.find(p=>p.id===id);
 const routeOf=(pk,rid)=>pk?.routes.find(r=>r.id===rid);
 const stopKey=s=>s.pid?'p:'+s.pid:s.key;
@@ -210,13 +224,13 @@ function distLine(p,g){if(!g||g.length<2)return Infinity;const k=Math.cos(p.lat*
 function go(v){VIEW=v;render();}
 function curStop(){const pk=pkgOf(VIEW.pk);if(!pk)return null;if(VIEW.r==='§avulsos')return pk.points[VIEW.i]||null;if(VIEW.r==='§novos')return VIEW.novo||null;return routeOf(pk,VIEW.r)?.stops[VIEW.i]||null;}
 function setHead(t,sub){$('hTitle').innerHTML='<span class="t">'+esc(t)+'</span>'+(sub?'<small>'+esc(sub)+'</small>':'');setHH();}
-function render(){const sh=$('sheet');sh.classList.remove('min');const v=VIEW.v;if(v!=='acRun'&&NAV)navSet(false);$('btnBack').hidden=v==='home'||v==='acRun';const run=v==='acRun';document.body.classList.toggle('running',run);$('hud').hidden=!run;$('runbar').hidden=!run;sh.hidden=run;if(!run)$('banner').hidden=true;
- if(v==='home')return homeView();if(v==='vist')return vistView();if(v==='route')return routeView();if(v==='point')return pointView();if(v==='form')return formView();if(v==='send')return sendView();
+function render(){renderSt();dnavSync();const sh=$('sheet');sh.classList.remove('min');const v=VIEW.v;if(v!=='acRun'&&NAV)navSet(false);$('btnBack').hidden=v==='home'||v==='acRun';const run=v==='acRun';document.body.classList.toggle('running',run);$('hud').hidden=!run;$('runbar').hidden=!run;sh.hidden=run;if(!run)$('banner').hidden=true;
+ if(v==='home')return homeView();if(v==='vist')return vistView();if(v==='route')return routeView();if(v==='point')return pointView();if(v==='form')return formView();if(v==='send')return sendView();if(v==='envios')return enviosView();
  if(v==='acNew')return acNewView();if(v==='acHead')return acHeadView();if(v==='acRun')return acRunView();if(v==='acStop')return acStopView();if(v==='acEnd')return acEndView();}
 /* início: as duas tarefas de campo */
 function homeView(){setHead(APP,ME?ME+(MAT?' · mat. '+MAT:''):'Acompanhamento de linha e vistoria de pontos');if(MAP){LAY.clearLayers();TRAIL.clearLayers();}const n=pendingExport(),hp=HIST.filter(a=>!a.sent).length;
  let h=`<div class="grab" onclick="sheetSize()"></div>`;
- h+=CONN?`<div class="note ok">☁ <b>Conectado ao Estúdio de Rotas</b>${CONN.at?' · base de '+new Date(CONN.at).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):' · base ainda não baixada'}${FILA.length?' · <b>'+FILA.length+' envio(s) na fila</b>':''}<div class="btns" style="margin:6px 0 0"><button class="sm" onclick="campoSync(true)">↻ Atualizar agora</button><button class="sm" onclick="campoConnect()">Trocar conexão</button></div></div>`:`<button class="big" onclick="campoConnect()"><span class="ic">☁</span><span><b>Conectar ao Estúdio de Rotas</b><small>Cole o código de conexão (Estúdio de Rotas → Acompanhamentos). A base chega sozinha e os resultados vão direto para o computador, sem exportar arquivo.</small></span></button>`;
+ h+=CONN?`<div class="note ok">☁ <b>Conectado ao Estúdio de Rotas</b>${CONN.at?' · base de '+new Date(CONN.at).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):' · base ainda não baixada'}${FILA.length?' · <b>'+FILA.length+' envio(s) na fila</b>':''}<div class="btns" style="margin:6px 0 0"><button class="sm" onclick="go({v:'envios'})">📤 Envios</button><button class="sm" onclick="campoSync(true)">↻ Atualizar agora</button><button class="sm" onclick="campoConnect()">Trocar conexão</button></div></div>`:`<button class="big" onclick="campoConnect()"><span class="ic">☁</span><span><b>Conectar ao Estúdio de Rotas</b><small>Cole o código de conexão (Estúdio de Rotas → Acompanhamentos). A base chega sozinha e os resultados vão direto para o computador, sem exportar arquivo.</small></span></button>`;
  if(!PKGS.length)h+=`<h2>Comece pelo pacote de campo</h2><p class="small mut">No computador, no Estúdio de Rotas: <b>Base ativa → Pontos</b> → <b>📱 Pacote de vistoria</b> (ou Planejamento → Exportar). Marque as linhas que vai acompanhar, envie o arquivo para este celular (WhatsApp, e-mail ou cabo) e abra aqui.</p><div class="drop" onclick="$('file').click()"><b style="font-size:16px">📂 Abrir pacote (.json)</b><br><span class="small">toque para escolher o arquivo</span></div>`;
  else{if(AC&&AC.status==='run')h+=`<button class="big on" onclick="go({v:'acRun'})"><span class="ic">▶️</span><span><b>Continuar acompanhamento</b><small>${esc(AC.head.linha)} · ${esc(AC.head.sentido)} · ${AC.stops.length} parada(s) registrada(s)${acCar(AC)?' · vistoria técnica':''}</small></span></button><button class="sm bad" style="width:100%;margin:0 0 8px" onclick="acDiscard()">🗑 Excluir / descartar este acompanhamento</button>`;
   else h+=`<button class="big" onclick="acStart()"><span class="ic">🚌</span><span><b>Acompanhar uma viagem</b><small>Siga a linha pelo GPS, registre as paradas, os embarques e desembarques e o checklist.</small></span></button>`;
@@ -701,11 +715,11 @@ async function acData(a){const stops=[];for(const s of a.stops)stops.push({...s,
 async function acExport(i,share){const a=HIST[i];if(!a)return;const{data,name}=await acData(a);
  if(!await shareFile(data,name,share,'Acompanhamento '+a.head.linha+' '+a.head.sentido,acText(a)))return;a.sent=new Date().toISOString();await saveAll();toast('Acompanhamento pronto para o computador.','ok');render();}
 function acWhats(i){const a=HIST[i];if(a)window.open('https://wa.me/?text='+encodeURIComponent(acText(a)),'_blank');}
-async function boot(){setHH();if(window.ResizeObserver)new ResizeObserver(setHH).observe(document.querySelector('header'));addEventListener('resize',setHH);setInterval(()=>{if(VIEW.v==='acRun'&&AC&&AC.status==='run')hud();},1000);await DB.open();PKGS=(await DB.get('pkgs'))||[];RES=(await DB.get('res'))||{};ME=(await DB.get('me'))||'';MAT=(await DB.get('mat'))||'';AC=(await DB.get('ac'))||null;HIST=(await DB.get('hist'))||[];CONN=(await DB.get('conn'))||null;FILA=(await DB.get('fila'))||[];if(AC&&AC.status==='run'&&!('t0' in AC))AC.t0=AC.startAt;/* viagem iniciada na 2.3 */initMap();
+async function boot(){setHH();if(window.ResizeObserver)new ResizeObserver(setHH).observe(document.querySelector('header'));addEventListener('resize',setHH);setInterval(()=>{if(VIEW.v==='acRun'&&AC&&AC.status==='run')hud();},1000);await DB.open();PKGS=(await DB.get('pkgs'))||[];RES=(await DB.get('res'))||{};ME=(await DB.get('me'))||'';MAT=(await DB.get('mat'))||'';AC=(await DB.get('ac'))||null;HIST=(await DB.get('hist'))||[];CONN=(await DB.get('conn'))||null;FILA=(await DB.get('fila'))||[];IDENT=(await DB.get('ident'))||null;if(AC&&AC.status==='run'&&!('t0' in AC))AC.t0=AC.startAt;/* viagem iniciada na 2.3 */initMap();
  $('btnBack').onclick=()=>{FORM=null;const v=VIEW.v;if(v==='form')go({...VIEW,v:'point'});else if(v==='point'&&VIEW.r!=='§novos')go({v:'route',pk:VIEW.pk,r:VIEW.r});else if(v==='route'||v==='send')go({v:'vist'});else if(v==='acStop'){STOP=null;go({v:'acRun'});}else if(v==='acHead')go({v:'acNew'});else go({v:'home'});};
  $('btnLayer').onclick=toggleTiles;$('btnGps').onclick=()=>gpsToggle();$('file').onchange=e=>{openFile(e.target.files[0]);e.target.value='';};
  window.addEventListener('beforeunload',e=>{if((pendingExport()||AC)&&DB.mode==='mem'){e.preventDefault();e.returnValue='';}});
- if(AC&&AC.status==='run'){go({v:'acRun'});toast('Acompanhamento em andamento retomado.','ok');}else render();if(CONN)campoSync(false);}
+ if(AC&&AC.status==='run'){go({v:'acRun'});toast('Acompanhamento em andamento retomado.','ok');}else render();if(CONN)campoSync(false);identGate();}
 /* ---------- conexão com o Estúdio de Rotas (Apps Script do link): a base chega sozinha e os resultados vão direto ---------- */
 const connUrl=q=>CONN.url+(CONN.url.includes('?')?'&':'?')+q;
 function campoConnect(){const c=prompt('Cole o código de conexão (computador: Estúdio de Rotas → Acompanhamentos → Sincronização com o celular → Copiar).\nDeixe em branco para desconectar.','');if(c===null)return;
@@ -714,10 +728,10 @@ function campoConnect(){const c=prompt('Cole o código de conexão (computador: 
  const m=/^RSC1\|(https:\/\/script\.google(?:usercontent)?\.com\/[^|\s]+)\|([0-9a-f]{16,64})$/i.exec(t);if(!m){toast('Código inválido: copie de novo no Estúdio de Rotas (Acompanhamentos → 📋 Copiar) e cole aqui, sem abrir como link.','bad',8000);return;}
  CONN={url:m[1],key:m[2],at:''};saveAll();campoSync(true);}
 async function campoSync(manual){if(!CONN)return;if(!navigator.onLine){if(manual)toast('Sem internet agora: a base fica como está e os envios esperam na fila.','warn');return;}
- try{/* 2.9: só baixa a base quando ela mudou (consulta leve a cada 30 s) */let pv='';if(!manual){const x=await fetch(connUrl('campo=pacote-ver&t='+encodeURIComponent(CONN.key))).then(r=>r.json()).catch(()=>null);if(x?.appMin&&appOld(x.appMin))return;if(x?.ok&&x.at){if(x.at===CONN.pv)throw 0;pv=x.at;}}
+ try{/* 2.9: só baixa a base quando ela mudou (consulta leve a cada 30 s) */let pv='';if(!manual){const x=await fetch(connUrl('campo=pacote-ver&t='+encodeURIComponent(CONN.key))).then(r=>r.json()).catch(()=>null);if(x?.appMin&&appOld(x.appMin))return;if(x?.ok){CONN.okAt=new Date().toISOString();CONN.err='';}if(x?.ok&&x.at){if(x.at===CONN.pv)throw 0;pv=x.at;}}
   const r=await fetch(connUrl('campo=pacote&t='+encodeURIComponent(CONN.key)));const d=await r.json();if(d.ok===false)throw new Error(d.erro||'erro do Estúdio de Rotas');if(d.kind!=='rota-studio-campo'||!Array.isArray(d.routes))throw new Error('resposta inesperada');
-  await loadPkg({...d,auto:true});CONN.at=new Date().toISOString();CONN.pv=pv||'';await saveAll();if(manual)toast('Base atualizada: '+d.routes.length+' viagem(ns) vigente(s).','ok');if(['home','vist'].includes(VIEW.v))render();}
- catch(e){if(manual&&e)toast('Não consegui buscar a base: '+e.message,'bad',8000);}const pend=Object.values(RES).filter(x=>!x.sent&&x.sst&&!FILA.some(f=>f.ref?.vist?.includes(x.key))).map(x=>x.key);if(pend.length)await vistSend(pend);await flush();}
+  await loadPkg({...d,auto:true});CONN.at=CONN.okAt=new Date().toISOString();CONN.err='';linkCheck(d.link);CONN.pv=pv||'';await saveAll();if(manual)toast('Base atualizada: '+d.routes.length+' viagem(ns) vigente(s).','ok');if(['home','vist'].includes(VIEW.v))render();}
+ catch(e){if(e){CONN.err=e.message||String(e);if(manual)toast('Não consegui buscar a base: '+CONN.err,'bad',8000);}}staleCheck();const pend=Object.values(RES).filter(x=>!x.sent&&x.sst&&!FILA.some(f=>f.ref?.vist?.includes(x.key))).map(x=>x.key);if(pend.length)await vistSend(pend);await flush();}
 /* 2.8.1: base atualizada a cada 2 min com o app aberto (e ao voltar para o app), para ver o que foi lançado no computador */
 setInterval(()=>{if(CONN&&!document.hidden&&!['form','acRun'].includes(VIEW.v))campoSync(false);},30000);
 document.addEventListener('visibilitychange',()=>{if(CONN&&!document.hidden&&!['form','acRun'].includes(VIEW.v))campoSync(false);});
@@ -730,15 +744,83 @@ function appOld(min){const x=appVer().split('.').map(Number),y=String(min).split
  d.innerHTML=`<div style="background:#fff;color:#0f172a;max-width:420px;border-radius:16px;padding:22px 20px;font:15px/1.45 system-ui,sans-serif"><h2 style="margin:0 0 8px;font-size:19px">⚠ Atualize o app</h2><p style="margin:0 0 14px">Este celular está com o <b>${esc(APP)}</b>; a equipe já usa a versão <b>${esc(min)}</b> ou mais nova. Os lançamentos e a fila de envio ficam guardados no celular.</p><button type="button" onclick="location.reload()" style="width:100%;padding:13px;border:0;border-radius:10px;background:#0e7490;color:#fff;font:700 16px system-ui,sans-serif">↻ Atualizar agora</button></div>`;
  document.body.append(d);return true;}
 async function vistSend(keys){const items=[];for(const k of keys){const x=RES[k];if(!x)continue;const photos=[];for(const id of x.photos||[]){const d=await DB.get('ph:'+id);if(d)photos.push(d);}items.push({...x,photos});}if(!items.length)return;
- const nome='Vistoria_'+(ME||'campo').replace(/[^\wÀ-ú]+/g,'_')+'_'+(keys.length>1?new Date().toISOString().slice(0,16).replace(/[:T]/g,'-'):keys[0].replace(/[^\w]+/g,'_'))+'.json';
+ const nome='Vistoria_'+(ME||'campo').replace(/[^\wÀ-ú]+/g,'_')+'_'+(keys.length>1?new Date().toISOString().slice(0,19).replace(/[:T]/g,'-'):keys[0].replace(/[^\w]+/g,'_'))+'.json';
  return enviar(nome,{kind:'rota-studio-vistorias',v:1,app:APP,made:new Date().toISOString(),by:ME||'campo',items},{vist:items.map(x=>x.key)});}
-async function enviar(nome,dados,ref){FILA=FILA.filter(f=>f.nome!==nome&&!(ref?.ac&&f.ref?.ac===ref.ac));FILA.push({nome,dados,ref:ref||null,at:new Date().toISOString()});await saveAll();return flush();}
+/* ===================== 2.10 — envio com recibo, status ao vivo, problemas à vista e identificação =====================
+ Cada envio vai sozinho (um erro não segura os outros), com nova tentativa em 30 s, 1, 5, 15 e 30 min. O servidor devolve um recibo
+ (id do arquivo); o app confere a cada 30 s se o Estúdio de Rotas já importou (✓✓). Nada é apagado do aparelho: lançamentos e fotos
+ ficam aqui até o ✓✓. Envio que falha 3 vezes abre a tela “Envios” (com “Tentar de novo” e “Salvar arquivo”). */
+let IDENT=null,STALE=false;
+const tfetch=(u,o={},ms=90000)=>{const c=new AbortController(),t=setTimeout(()=>c.abort(),ms);return fetch(u,{...o,signal:c.signal}).finally(()=>clearTimeout(t));};
+const fdtm=s=>s?new Date(s).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):'';
+const envKind=d=>d?.kind==='rota-studio-acomp'?'Acompanhamento':'Vistoria';
+function envLabel(f){const d=f.dados||{};if(d.kind==='rota-studio-acomp'){const h=d.acomp?.head||{};return 'Acompanhamento · '+[h.linha,h.sentido,fdt(h.data)].filter(Boolean).join(' · ');}const it=d.items||[];return 'Vistoria · '+(it.length>1?it.length+' pontos':it[0]?.name||'ponto');}
+async function enviar(nome,dados,ref){FILA=FILA.filter(f=>f.nome!==nome&&!(ref?.ac&&f.ref?.ac===ref.ac));
+ FILA.push({nome,dados,ref:ref||null,at:new Date().toISOString(),cid:uid(),tries:0});await saveAll();renderSt();return flush(true);}
+function envMark(it,id){const now=new Date().toISOString(),set=x=>{x.sent=now;x.rid=id||'';delete x.prob;delete x.ok2;};
+ if(it.ref?.ac){const h=HIST.find(x=>x.id===it.ref.ac);if(h)set(h);}for(const k of it.ref?.vist||[])if(RES[k])set(RES[k]);}
 let FLUSHING=false;
-async function flush(){if(!CONN||!FILA.length||FLUSHING||!navigator.onLine)return !FILA.length;FLUSHING=true;let ok=0;
- try{while(FILA.length){const it=FILA[0];const r=await fetch(CONN.url,{method:'POST',body:JSON.stringify({t:CONN.key,nome:it.nome,dados:it.dados})});const d=await r.json().catch(()=>({ok:false,erro:'resposta inválida'}));if(!d.ok)throw new Error(d.erro||'falhou');
-  FILA.shift();ok++;const now=new Date().toISOString();if(it.ref?.ac){const h=HIST.find(x=>x.id===it.ref.ac);if(h)h.sent=now;}for(const k of it.ref?.vist||[])if(RES[k])RES[k].sent=now;await saveAll();}}
- catch(e){toast('Envio ao Estúdio de Rotas pendente ('+e.message+'). Tento de novo quando houver internet.','warn',7000);}finally{FLUSHING=false;}
- if(ok){toast(ok+' envio(s) entregue(s) ao Estúdio de Rotas.','ok');if(['home','acEnd','vist'].includes(VIEW.v))render();}return !FILA.length;}
+async function flush(now){if(!CONN||FLUSHING||!navigator.onLine||!FILA.length){renderSt();return !FILA.length;}FLUSHING=true;let ok=0,nova=false;
+ try{for(const it of FILA.slice()){if(!FILA.includes(it)||(!now&&it.next&&Date.now()<it.next))continue;
+  try{const r=await tfetch(CONN.url,{method:'POST',body:JSON.stringify({t:CONN.key,nome:it.nome,dados:it.dados,cid:it.cid,app:appVer(),by:IDENT?.nome||ME||'',email:IDENT?.email||'',mat:IDENT?.mat||MAT||''})});
+   const d=await r.json().catch(()=>({ok:false,erro:'o servidor não respondeu como o Estúdio de Rotas (HTTP '+r.status+') — link antigo ou script fora do ar'}));if(!d.ok)throw new Error(d.erro||'falhou');
+   envMark(it,d.id);FILA=FILA.filter(x=>x!==it);ok++;await saveAll();}
+  catch(e){const was=it.tries||0;it.tries=was+1;it.err=e.name==='AbortError'?'o servidor não respondeu em 90 s (internet lenta ou arquivo grande)':(e.message||'falhou');
+   if(/chave inválida|não reconhecido/i.test(it.err))it.tries=Math.max(it.tries,3);it.next=Date.now()+[30,60,300,900,1800][Math.min(it.tries-1,4)]*1000;if(was<3&&it.tries>=3)nova=true;await saveAll();}}}
+ finally{FLUSHING=false;}
+ if(ok)toast('✓ '+ok+' envio(s) recebido(s) pelo Estúdio de Rotas.','ok');
+ renderSt();if(['home','acEnd','vist','envios'].includes(VIEW.v))render();
+ if(nova){if(['form','acRun','acStop','acHead','acNew'].includes(VIEW.v))toast('⚠ Envio com problema — toque no selo vermelho do topo para resolver.','bad',9000);else go({v:'envios'});}
+ return !FILA.length;}
+/* ✓✓: o Estúdio de Rotas importou o arquivo (o servidor diz onde ele está) */
+async function envPoll(manual){if(!CONN||!navigator.onLine)return;const all=[...Object.values(RES),...HIST].filter(x=>x.sent&&x.rid&&!x.ok2),ids=[...new Set(all.map(x=>x.rid))].slice(0,40);
+ if(!ids.length){if(manual)toast('Nada aguardando confirmação.','ok');return;}
+ try{const j=await tfetch(connUrl('campo=status&t='+encodeURIComponent(CONN.key)+'&ids='+encodeURIComponent(ids.join(','))),{},30000).then(r=>r.json());if(!j?.ok||!j.st)throw new Error(j?.erro||'o servidor ainda não tem a conferência (script antigo)');let n=0;
+  for(const x of all){const s=j.st[x.rid];if(!s)continue;if(s.s==='importado'){x.ok2=new Date().toISOString();delete x.prob;n++;}else if(s.s==='problema')x.prob=s.erro||'erro na importação';else if(s.s==='sumiu')x.prob='o arquivo não foi encontrado no servidor — envie de novo';}
+  await saveAll();renderSt();if(VIEW.v==='envios'||(n&&['home','vist','acEnd'].includes(VIEW.v)))render();if(manual)toast(n?'✓✓ '+n+' lançamento(s) confirmado(s) no sistema.':'Conferido: ainda aguardando o Estúdio de Rotas importar.','ok');}
+ catch(e){if(manual)toast('Não consegui conferir: '+e.message,'bad',7000);}}
+async function envResend(k,id){if(k==='ac'){const i=HIST.findIndex(a=>a.id===id);if(i<0)return;for(const f of['prob','rid','sent','ok2'])delete HIST[i][f];await acCloud(i);}else{const x=RES[id];if(!x)return;for(const f of['prob','rid','sent','ok2'])delete x[f];await vistSend([id]);}render();}
+function envRetry(i){const f=FILA[i];if(!f)return;f.next=0;flush(true);toast('Enviando de novo…','ok',2500);}
+function envSave(i){const f=FILA[i];if(!f)return;const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(f.dados)],{type:'application/json'}));a.download=f.nome;document.body.append(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1500);
+ toast('Arquivo salvo. Ele continua na fila: o envio segue tentando sozinho.','ok',7000);}
+function envState(){const sent=[...Object.values(RES),...HIST].filter(x=>x.sent);return{fila:FILA.length,err:FILA.filter(f=>(f.tries||0)>=3).length,wait:sent.filter(x=>x.rid&&!x.ok2&&!x.prob).length,prob:sent.filter(x=>x.prob&&!x.ok2).length};}
+function renderSt(){const b=$('btnSt');if(!b)return;const s=envState(),bad=s.err+s.prob;if(!CONN&&!s.fila){b.hidden=true;return;}b.hidden=false;
+ const[k,ic,n,t]=bad?['bad','⚠',bad,'com problema']:s.fila?['run','⏳',s.fila,'enviando']:s.wait?['wait','✓',s.wait,'aguardando o Estúdio']:['ok','✓✓','','tudo no sistema'];
+ b.className='stpill '+k;b.innerHTML=`<span>${ic}${n?' '+n:''}</span><span class="sl"> ${t}</span>`;b.title='Envios ao Estúdio de Rotas: '+(n?n+' ':'')+t;b.setAttribute('aria-label',b.title);}
+function enviosView(){setHead('Envios ao Estúdio de Rotas',CONN?(navigator.onLine?'conectado':'sem internet agora — tudo fica guardado neste aparelho'):'sem conexão com o Estúdio de Rotas');if(MAP){LAY.clearLayers();}
+ const s=envState(),bad=s.err+s.prob,sent=[...HIST.map(a=>({k:'ac',id:a.id,x:a,label:'Acompanhamento · '+[a.head?.linha,a.head?.sentido,fdt(a.head?.data)].filter(Boolean).join(' · ')})),...Object.values(RES).map(x=>({k:'vi',id:x.key,x,label:'Vistoria · '+(x.name||'ponto')}))].filter(o=>o.x.sent).sort((a,b)=>(a.x.ok2?1:0)-(b.x.ok2?1:0)||String(b.x.sent).localeCompare(String(a.x.sent))).slice(0,80);
+ let h=`<div class="grab" onclick="sheetSize()"></div><div class="note ${bad?'bad':s.fila?'warn':'ok'}">${bad?`<b>⚠ ${bad} envio(s) com problema.</b> Tente de novo ou salve o arquivo e mande para o responsável pelo Estúdio de Rotas.`:s.fila?`<b>⏳ ${s.fila} envio(s) saindo deste aparelho.</b>`:s.wait?`<b>✓ ${s.wait} recebido(s) pelo servidor</b>, aguardando o Estúdio de Rotas importar (alguém precisa estar com ele aberto).`:'<b>✓✓ Tudo o que saiu deste aparelho está no sistema.</b>'}</div>
+ <p class="small mut">⏳ no aparelho → ✓ recebido pelo servidor → ✓✓ no sistema. Os lançamentos e as fotos ficam guardados aqui até o ✓✓.</p>`;
+ if(!CONN)h+=`<button class="big" onclick="campoConnect()"><span class="ic">☁</span><span><b>Conectar ao Estúdio de Rotas</b><small>Sem conexão, os envios esperam neste aparelho.</small></span></button>`;
+ if(FILA.length)h+=`<h3>Saindo deste aparelho (${FILA.length})</h3>`+FILA.map((f,i)=>`<div class="card env"><span class="num ${(f.tries||0)>=3?'reprovado':'proposto'}">${(f.tries||0)>=3?'!':'⏳'}</span><div class="grow" style="min-width:0"><b>${esc(envLabel(f))}</b><small>${f.err?'<span style="color:var(--bad)">'+esc(f.err)+'</span> · '+f.tries+' tentativa(s)':'na fila desde '+fdtm(f.at)}${f.next&&f.next>Date.now()?' · nova tentativa às '+new Date(f.next).toLocaleTimeString('pt-BR',{timeStyle:'short'}):''}</small></div><div class="eact"><button class="sm" onclick="envRetry(${i})">Tentar de novo</button><button class="sm" onclick="envSave(${i})">Salvar arquivo</button></div></div>`).join('');
+ h+=`<h3>Enviados (${sent.length})</h3>`+(sent.map(o=>`<div class="card env"><span class="num ${o.x.ok2?'validado':o.x.prob?'reprovado':'feito'}">${o.x.ok2?'✓✓':o.x.prob?'!':'✓'}</span><div class="grow" style="min-width:0"><b>${esc(o.label)}</b><small>${o.x.ok2?'No sistema · confirmado em '+fdtm(o.x.ok2):o.x.prob?'<span style="color:var(--bad)">'+esc(o.x.prob)+'</span>':o.x.rid?'Recebido em '+fdtm(o.x.sent)+' · aguardando o Estúdio de Rotas importar':'Enviado em '+fdtm(o.x.sent)+' (versão antiga do app, sem recibo)'}</small></div>${o.x.prob&&!o.x.ok2?`<div class="eact"><button class="sm" onclick="envResend('${o.k}','${esc(o.id)}')">Enviar de novo</button></div>`:''}</div>`).join('')||'<p class="small mut">Nada enviado ainda deste aparelho.</p>');
+ h+=`<div class="btns"><button class="p" onclick="flush(true)">↻ Enviar agora</button><button onclick="envPoll(true)">Conferir no sistema</button></div>`;
+ $('sheet').innerHTML=h;}
+/* ---------- base desatualizada / link antigo ---------- */
+function linkCheck(lk){if(!CONN||!lk||lk===CONN.url||!/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(lk))return;CONN.url=lk;saveAll();toast('Conexão atualizada para o endereço atual do Estúdio de Rotas.','ok',7000);}
+function staleCheck(){if(!CONN||!navigator.onLine||!CONN.err||STALE||$('staleBox')||$('identBox'))return;const last=CONN.okAt||CONN.at,age=last?Date.now()-Date.parse(last):Infinity;if(age<864e5)return;STALE=true;
+ const why=/Unexpected token|JSON|not valid/i.test(CONN.err)?'o endereço da conexão não respondeu como o Estúdio de Rotas (link antigo ou script fora do ar)':CONN.err;
+ const d=document.createElement('div');d.id='staleBox';d.className='ovl';d.setAttribute('role','alertdialog');d.setAttribute('aria-modal','true');d.setAttribute('aria-labelledby','stT');
+ d.innerHTML=`<div class="obox"><h2 id="stT">⚠ Base desatualizada</h2><p>Este aparelho não consegue atualizar a base do Estúdio de Rotas${last?' desde <b>'+esc(fdtm(last))+'</b>':''}.</p><p class="small mut">Motivo: ${esc(why)}.</p><p class="small">Seus lançamentos e a fila de envio continuam guardados aqui.</p>
+ <div class="btns one"><button class="p" id="stR">↻ Atualizar base</button><button id="stC">Colar código de conexão novo</button><button id="stX">Continuar assim</button></div></div>`;
+ document.body.append(d);$('stR').focus();const close=()=>d.remove();
+ $('stR').onclick=async()=>{$('stR').textContent='Atualizando…';await campoSync(true);if(!CONN?.err){close();STALE=false;}else $('stR').textContent='↻ Tentar de novo';};$('stC').onclick=()=>{close();STALE=false;campoConnect();};$('stX').onclick=close;}
+/* ---------- identificação: nome completo, e-mail e matrícula (mesma conferência do Estúdio de Rotas) ---------- */
+function identGate(force,msg){if(!force&&IDENT?.nome)return;if(!force&&AC&&AC.status==='run')return;$('identBox')?.remove();
+ const d=document.createElement('div');d.id='identBox';d.className='ovl';d.setAttribute('role','dialog');d.setAttribute('aria-modal','true');d.setAttribute('aria-labelledby','idT');
+ d.innerHTML=`<form class="obox" id="idF" novalidate><h2 id="idT">Quem está usando o app?</h2><p class="small mut">Os seus lançamentos e envios levam estes dados. Use os mesmos do Estúdio de Rotas no computador.</p>
+ <label><span>Nome completo</span><input id="idN" autocomplete="name" value="${esc(IDENT?.nome||ME||'')}"></label><label><span>E-mail</span><input id="idE" type="email" autocomplete="email" value="${esc(IDENT?.email||'')}"></label><label><span>Matrícula</span><input id="idM" inputmode="numeric" value="${esc(IDENT?.mat||MAT||'')}"></label>
+ <p class="small" id="idErr" role="alert" style="color:var(--bad);min-height:1.2em;margin:6px 0">${esc(msg||'')}</p><button class="p" style="width:100%">Continuar</button></form>`;
+ document.body.append(d);$('idN').focus();
+ $('idF').onsubmit=async e=>{e.preventDefault();const nome=$('idN').value.trim().replace(/\s+/g,' '),email=$('idE').value.trim().toLowerCase(),mat=$('idM').value.trim().replace(/\s+/g,''),er=t=>{$('idErr').textContent=t;};
+  if(nome.split(' ').length<2)return er('Informe o nome completo (nome e sobrenome).');if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))return er('E-mail inválido.');if(!/^[0-9A-Za-z.\-]{2,30}$/.test(mat))return er('Matrícula inválida (use só números e letras).');
+  let ok=false;if(CONN&&navigator.onLine){er('Conferindo…');try{const j=await tfetch(CONN.url,{method:'POST',body:JSON.stringify({t:CONN.key,acao:'usuario',nome,email,mat})},30000).then(r=>r.json());if(j.ok===false)return er(j.erro||'Não foi possível conferir.');ok=!!j.ok;}catch{}er('');}
+  IDENT={nome,email,mat,ok};ME=nome;MAT=mat;await saveAll();d.remove();render();staleCheck();toast(ok?'Identificação confirmada.':'Identificação guardada — confiro quando houver conexão.','ok');};}
+async function identVerify(){if(!IDENT?.nome||IDENT.ok||!CONN||!navigator.onLine)return;try{const j=await tfetch(CONN.url,{method:'POST',body:JSON.stringify({t:CONN.key,acao:'usuario',nome:IDENT.nome,email:IDENT.email,mat:IDENT.mat})},30000).then(r=>r.json());
+ if(j.ok){IDENT.ok=true;await saveAll();}else if(j.ok===false&&!/chave/i.test(j.erro||''))identGate(true,j.erro);}catch{}}
+function dnavSync(){const v=VIEW.v,g=['vist','route','point','form','send'].includes(v)?'vist':v;document.querySelectorAll('#dnav [data-go]').forEach(b=>b.setAttribute('aria-current',b.dataset.go===g?'page':'false'));}
+setInterval(()=>{if(CONN&&navigator.onLine){flush();envPoll();identVerify();}},30000);
+addEventListener('keydown',e=>{if(e.key==='Escape'&&!['form','acStop','acHead'].includes(VIEW.v)&&!$('identBox')&&!$('staleBox')&&$('modal').hidden&&!$('btnBack').hidden)$('btnBack').click();});
 window.addEventListener('online',()=>flush());
 document.addEventListener('DOMContentLoaded',boot);
 </script>
