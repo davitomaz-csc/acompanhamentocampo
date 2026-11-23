@@ -126,7 +126,7 @@ header .stpill.ok{background:#15803d}header .stpill.wait{background:#0e7490}head
  Modo B (acompanhamento individual de carro ou ônibus). GPS contínuo, paradas com raio de tolerância, embarques/desembarques,
  fechamento com métricas e arquivo para importar no computador. Vistoria de pontos: checklist, fotos e posição pelo GPS.
  Tudo fica guardado no próprio celular até ser enviado. */
-const APP='Estúdio de Rotas Campo 2.10 · by Davi';
+const APP='Estúdio de Rotas Campo 2.11 · by Davi';
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const uid=(p='i')=>p+Date.now().toString(36).slice(-6)+Math.random().toString(36).slice(2,6);
@@ -708,7 +708,7 @@ function acText(a){const m=acMetrics(a);if(acCar(a)){const T=m.tec;return[`*Vist
  return [`*Acompanhamento de linha* — ${a.head.linha} ${a.head.sentido}`,`${fdt(a.head.data)} · ${a.head.hIni}–${a.head.hFim} (${durTxt(m.dur)})`,a.mode==='A'?`Modo A · carro ${a.head.carro} · motorista ${a.head.motorista} (mat. ${a.head.matMot})`:`Modo B · individual (${a.head.veic})`,`Acompanhante: ${a.head.acomp} (mat. ${a.head.matAcomp})`,'',
  `Paradas: ${m.nStops} — ${m.inT} no ponto, ${m.out} fora do ponto${m.semGps?', '+m.semGps+' sem GPS':''}`,`Pontos programados atendidos: ${m.att} de ${m.nProg}`,`Embarques ${m.emb} · Desembarques ${m.des} · Pico a bordo ${m.peak}`,m.tmN?`Pontualidade: ${m.onTime} de ${m.tmN} no horário (±5 min)${m.avg!=null?' · média '+(m.avg>0?'+':'')+Math.round(m.avg)+' min':''}`:'',m.off?`Saídas do traçado planejado: ${m.off}`:'',
  a.mode==='A'?(a.ckSkip?`Checklist dispensado: ${a.ckSkip.why}`:`Checklist: ${m.ckOkN} de ${m.ckN} conforme${m.ckBad.length?' — não conforme: '+m.ckBad.join(', '):''}`):'',...Object.entries(m.motivos).map(([k,n])=>`• Fora do ponto: ${k} (${n})`)].filter(x=>x!=='').join('\n');}
-async function acData(a){const stops=[];for(const s of a.stops)stops.push({...s,photo:s.photo?(await DB.get('ph:'+s.photo))||'':''});const r=routeOf(pkgOf(a.route.pk),a.route.id);
+async function acData(a){const stops=[];let miss=0;for(const s of a.stops){const ph=s.photo?(await DB.get('ph:'+s.photo))||'':'';if(s.photo&&!ph)miss++;stops.push({...s,photo:ph});}if(miss)a.fotoFalta=miss;else delete a.fotoFalta;const r=routeOf(pkgOf(a.route.pk),a.route.id);
  const data={kind:'rota-studio-acomp',v:1,app:APP,made:new Date().toISOString(),acomp:{...a,stops,nProg:r?.stops.length||a.nProg||0,prog:(r?.stops||[]).map((s,k)=>({i:k,n:s.n||k+1,name:s.name,ref:s.ref||'',pid:s.pid||'',lat:s.lat,lon:s.lon,t:s.t||''})),line:r?.line||'',metrics:acMetrics(a),text:acText(a)}};
  const name='Acompanhamento_'+String(a.head.linha).replace(/[^\wÀ-ú]+/g,'_')+'_'+a.head.sentido+'_'+a.head.data+'_'+a.head.hIni.replace(':','h')+'.json';
  return{data,name};}
@@ -743,7 +743,7 @@ function appOld(min){const x=appVer().split('.').map(Number),y=String(min).split
  const d=document.createElement('div');d.id='appOld';d.setAttribute('role','alertdialog');d.setAttribute('aria-modal','true');d.style.cssText='position:fixed;inset:0;z-index:100000;background:rgba(15,23,42,.9);display:grid;place-items:center;padding:16px';
  d.innerHTML=`<div style="background:#fff;color:#0f172a;max-width:420px;border-radius:16px;padding:22px 20px;font:15px/1.45 system-ui,sans-serif"><h2 style="margin:0 0 8px;font-size:19px">⚠ Atualize o app</h2><p style="margin:0 0 14px">Este celular está com o <b>${esc(APP)}</b>; a equipe já usa a versão <b>${esc(min)}</b> ou mais nova. Os lançamentos e a fila de envio ficam guardados no celular.</p><button type="button" onclick="location.reload()" style="width:100%;padding:13px;border:0;border-radius:10px;background:#0e7490;color:#fff;font:700 16px system-ui,sans-serif">↻ Atualizar agora</button></div>`;
  document.body.append(d);return true;}
-async function vistSend(keys){const items=[];for(const k of keys){const x=RES[k];if(!x)continue;const photos=[];for(const id of x.photos||[]){const d=await DB.get('ph:'+id);if(d)photos.push(d);}items.push({...x,photos});}if(!items.length)return;
+async function vistSend(keys){const items=[];for(const k of keys){const x=RES[k];if(!x)continue;const photos=[];let miss=0;for(const id of x.photos||[]){const d=await DB.get('ph:'+id);if(d)photos.push(d);else miss++;}if(miss)x.fotoFalta=miss;else delete x.fotoFalta;items.push({...x,photos,...(miss?{fotosFaltando:miss}:{})});}if(!items.length)return;
  const nome='Vistoria_'+(ME||'campo').replace(/[^\wÀ-ú]+/g,'_')+'_'+(keys.length>1?new Date().toISOString().slice(0,19).replace(/[:T]/g,'-'):keys[0].replace(/[^\w]+/g,'_'))+'.json';
  return enviar(nome,{kind:'rota-studio-vistorias',v:1,app:APP,made:new Date().toISOString(),by:ME||'campo',items},{vist:items.map(x=>x.key)});}
 /* ===================== 2.10 — envio com recibo, status ao vivo, problemas à vista e identificação =====================
@@ -757,13 +757,15 @@ const envKind=d=>d?.kind==='rota-studio-acomp'?'Acompanhamento':'Vistoria';
 function envLabel(f){const d=f.dados||{};if(d.kind==='rota-studio-acomp'){const h=d.acomp?.head||{};return 'Acompanhamento · '+[h.linha,h.sentido,fdt(h.data)].filter(Boolean).join(' · ');}const it=d.items||[];return 'Vistoria · '+(it.length>1?it.length+' pontos':it[0]?.name||'ponto');}
 async function enviar(nome,dados,ref){FILA=FILA.filter(f=>f.nome!==nome&&!(ref?.ac&&f.ref?.ac===ref.ac));
  FILA.push({nome,dados,ref:ref||null,at:new Date().toISOString(),cid:uid(),tries:0});await saveAll();renderSt();return flush(true);}
-function envMark(it,id){const now=new Date().toISOString(),set=x=>{x.sent=now;x.rid=id||'';delete x.prob;delete x.ok2;};
+/* fotos que o recibo do servidor precisa confirmar (nFotos) */
+const envFotos=d=>d?.kind==='rota-studio-acomp'?(d.acomp?.stops||[]).filter(s=>s.photo).length:(d?.items||[]).reduce((a,x)=>a+(x.photos||[]).filter(Boolean).length,0);
+function envMark(it,id){const now=new Date().toISOString(),set=x=>{x.sent=now;x.rid=id||'';delete x.prob;delete x.ok2;if(x.fotoFalta)x.prob=x.fotoFalta+' foto(s) não estavam mais no celular e não foram enviadas';};
  if(it.ref?.ac){const h=HIST.find(x=>x.id===it.ref.ac);if(h)set(h);}for(const k of it.ref?.vist||[])if(RES[k])set(RES[k]);}
 let FLUSHING=false;
 async function flush(now){if(!CONN||FLUSHING||!navigator.onLine||!FILA.length){renderSt();return !FILA.length;}FLUSHING=true;let ok=0,nova=false;
  try{for(const it of FILA.slice()){if(!FILA.includes(it)||(!now&&it.next&&Date.now()<it.next))continue;
   try{const r=await tfetch(CONN.url,{method:'POST',body:JSON.stringify({t:CONN.key,nome:it.nome,dados:it.dados,cid:it.cid,app:appVer(),by:IDENT?.nome||ME||'',email:IDENT?.email||'',mat:IDENT?.mat||MAT||''})});
-   const d=await r.json().catch(()=>({ok:false,erro:'o servidor não respondeu como o Estúdio de Rotas (HTTP '+r.status+') — link antigo ou script fora do ar'}));if(!d.ok)throw new Error(d.erro||'falhou');
+   const d=await r.json().catch(()=>({ok:false,erro:'o servidor não respondeu como o Estúdio de Rotas (HTTP '+r.status+') — link antigo ou script fora do ar'}));if(!d.ok)throw new Error(d.erro||'falhou');const nf=envFotos(it.dados);if(d.nFotos!=null&&d.nFotos!==nf)throw new Error('o servidor gravou '+d.nFotos+' de '+nf+' foto(s) — o app tenta de novo');
    envMark(it,d.id);FILA=FILA.filter(x=>x!==it);ok++;await saveAll();}
   catch(e){const was=it.tries||0;it.tries=was+1;it.err=e.name==='AbortError'?'o servidor não respondeu em 90 s (internet lenta ou arquivo grande)':(e.message||'falhou');
    if(/chave inválida|não reconhecido/i.test(it.err))it.tries=Math.max(it.tries,3);it.next=Date.now()+[30,60,300,900,1800][Math.min(it.tries-1,4)]*1000;if(was<3&&it.tries>=3)nova=true;await saveAll();}}}
@@ -776,7 +778,7 @@ async function flush(now){if(!CONN||FLUSHING||!navigator.onLine||!FILA.length){r
 async function envPoll(manual){if(!CONN||!navigator.onLine)return;const all=[...Object.values(RES),...HIST].filter(x=>x.sent&&x.rid&&!x.ok2),ids=[...new Set(all.map(x=>x.rid))].slice(0,40);
  if(!ids.length){if(manual)toast('Nada aguardando confirmação.','ok');return;}
  try{const j=await tfetch(connUrl('campo=status&t='+encodeURIComponent(CONN.key)+'&ids='+encodeURIComponent(ids.join(','))),{},30000).then(r=>r.json());if(!j?.ok||!j.st)throw new Error(j?.erro||'o servidor ainda não tem a conferência (script antigo)');let n=0;
-  for(const x of all){const s=j.st[x.rid];if(!s)continue;if(s.s==='importado'){x.ok2=new Date().toISOString();delete x.prob;n++;}else if(s.s==='problema')x.prob=s.erro||'erro na importação';else if(s.s==='sumiu')x.prob='o arquivo não foi encontrado no servidor — envie de novo';}
+  for(const x of all){const s=j.st[x.rid];if(!s)continue;if(s.s==='importado'){x.ok2=new Date().toISOString();if(!x.fotoFalta)delete x.prob;n++;}else if(s.s==='problema')x.prob=s.erro||'erro na importação';else if(s.s==='sumiu')x.prob='o arquivo não foi encontrado no servidor — envie de novo';}
   await saveAll();renderSt();if(VIEW.v==='envios'||(n&&['home','vist','acEnd'].includes(VIEW.v)))render();if(manual)toast(n?'✓✓ '+n+' lançamento(s) confirmado(s) no sistema.':'Conferido: ainda aguardando o Estúdio de Rotas importar.','ok');}
  catch(e){if(manual)toast('Não consegui conferir: '+e.message,'bad',7000);}}
 async function envResend(k,id){if(k==='ac'){const i=HIST.findIndex(a=>a.id===id);if(i<0)return;for(const f of['prob','rid','sent','ok2'])delete HIST[i][f];await acCloud(i);}else{const x=RES[id];if(!x)return;for(const f of['prob','rid','sent','ok2'])delete x[f];await vistSend([id]);}render();}
