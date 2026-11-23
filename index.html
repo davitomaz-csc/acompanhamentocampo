@@ -126,7 +126,7 @@ header .stpill.ok{background:#15803d}header .stpill.wait{background:#0e7490}head
  Modo B (acompanhamento individual de carro ou ônibus). GPS contínuo, paradas com raio de tolerância, embarques/desembarques,
  fechamento com métricas e arquivo para importar no computador. Vistoria de pontos: checklist, fotos e posição pelo GPS.
  Tudo fica guardado no próprio celular até ser enviado. */
-const APP='Estúdio de Rotas Campo 2.12 · by Davi';
+const APP='Estúdio de Rotas Campo 2.13 · by Davi';
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const uid=(p='i')=>p+Date.now().toString(36).slice(-6)+Math.random().toString(36).slice(2,6);
@@ -370,7 +370,7 @@ footer{margin-top:auto;border-top:1px solid #d7dde4;padding-top:3px;font-size:9.
 /* ---------- vistoria de segurança do ponto (2.6) ---------- */
 let FORM=null;
 const sstRoute=()=>{const pk=pkgOf(VIEW.pk);return VIEW.r&&!String(VIEW.r).startsWith('§')?routeOf(pk,VIEW.r):null;};
-async function formView(){const pk=pkgOf(VIEW.pk),s=curStop();if(!pk||!s)return go({v:'home'});const old=resOf(s),r=sstRoute();
+async function formView(){const pk=pkgOf(VIEW.pk),s=curStop();if(!pk||!s)return go({v:'home'});if(!gcan('campo-sst')){toast('Seu perfil ('+GAUTH.perfil+') não faz vistorias.','warn',6000);return go({v:'home'});}const old=resOf(s),r=sstRoute();
  /* 2.12: a edição parte da vistoria mais recente — a deste celular ou a que veio do sistema (pacote vis); da do sistema as fotos não vêm, mas continuam valendo (keepPh) */
  if(!FORM||FORM.key!==stopKey(s)){const pv0=sstPrev(pk,s),src=old&&!old.sent?old:pv0||old,sys=!!src&&src!==old,o=src?.sst||{};FORM={key:stopKey(s),keepPh:sys?(src.np||0):0,obs:o.obs||src?.notes||'',asp:new Set((o.asp||[]).map(a=>a.k).filter(Boolean)),aspX:(o.asp||[]).filter(a=>!a.k).map(a=>({...a})),prob:o.prob||0,sev:o.sev||0,cls:o.cls||'',med:new Set((o.med||[]).map(m=>m.t)),medX:(o.med||[]).filter(m=>!SST_MED.some(x=>x[0]===m.t)).map(m=>({...m})),just:o.just||'',rest:(o.rest||[]).join('\n'),photos:sys?[]:[...(old?.photos||[])],pos:sys?null:old?.pos||null,usePos:!sys&&!!old?.pos};}
  setHead('Vistoria de segurança',s.name);$('sheet').classList.add('full');const F=FORM;
@@ -529,7 +529,7 @@ async function acDiscard(){if(!AC)return;if(await modal('<h2>Excluir acompanhame
 /* exclui um acompanhamento encerrado (enviado ou não) */
 async function acDel(i){const a=HIST[i];if(!a)return;if(await modal(`<h2>Excluir acompanhamento</h2><p>Deseja realmente excluir esta análise${a.sent?'':' pendente'}?</p><p class="small mut"><b>${esc(a.head.linha)} · ${esc(a.head.sentido)}</b> de ${esc(fdt(a.head.data))} — ${a.sent?'já foi enviada ao computador (lá ela continua).':'<b>ainda não foi enviada</b> e será perdida.'}</p>`,[{t:'🗑 Sim, excluir',c:'bad',v:1},{t:'Cancelar',v:0}])!==1)return;
  for(const s of a.stops)if(s.photo)await DB.del('ph:'+s.photo);HIST.splice(i,1);FILA=FILA.filter(f=>f.ref?.ac!==a.id);await saveAll();toast('✓ Análise excluída com sucesso','ok');go({v:'home'});}
-function acStart(){if(AC&&AC.status==='run')return go({v:'acRun'});if(!PKGS.some(p=>p.routes.length)){toast('O pacote aberto não tem linhas. Gere o pacote no computador marcando as linhas.','warn',7000);return;}DRAFT={step:1,mode:'',rk:''};go({v:'acNew'});}
+function acStart(){if(AC&&AC.status==='run')return go({v:'acRun'});if(!gcan('campo-acomp')){toast('Seu perfil ('+GAUTH.perfil+') não faz acompanhamento de rota — só vistorias.','warn',6000);return;}if(!PKGS.some(p=>p.routes.length)){toast('O pacote aberto não tem linhas. Gere o pacote no computador marcando as linhas.','warn',7000);return;}DRAFT={step:1,mode:'',rk:''};go({v:'acNew'});}
 /* passo 1: linha e modo */
 function acNewView(){setHead('Novo acompanhamento','1 de 3 · linha e modo');if(MAP){LAY.clearLayers();TRAIL.clearLayers();}const D=DRAFT;
  let h=`<div class="grab" onclick="sheetSize()"></div><details class="help"><summary>ⓘ Como funciona o acompanhamento</summary><p>1. Escolha a linha e como você vai acompanhar. 2. Preencha o cabeçalho (e o checklist, no ônibus). 3. Siga a viagem: o GPS mostra o próximo ponto e a distância. Em cada parada, toque em <b>Registrar parada</b> e informe quem entrou e saiu. 4. No fim, veja o resumo e envie o arquivo para o computador.</p></details>
@@ -722,7 +722,17 @@ async function boot(){setHH();if(window.ResizeObserver)new ResizeObserver(setHH)
  window.addEventListener('beforeunload',e=>{if((pendingExport()||AC)&&DB.mode==='mem'){e.preventDefault();e.returnValue='';}});
  if(AC&&AC.status==='run'){go({v:'acRun'});toast('Acompanhamento em andamento retomado.','ok');}else render();if(CONN)campoSync(false);identGate();}
 /* ---------- conexão com o Estúdio de Rotas (Apps Script do link): a base chega sozinha e os resultados vão direto ---------- */
-const connUrl=q=>CONN.url+(CONN.url.includes('?')?'&':'?')+q;
+const connUrl=q=>CONN.url+(CONN.url.includes('?')?'&':'?')+q+(GAUTH.g?'&g='+encodeURIComponent(GAUTH.g):'');
+/* 2.13 — login com o Google: o token vai em cada pedido (g) e o script confere no Google e diz o perfil. Sem login segue a chave. */
+const GOOGLE_CLIENT_ID='357255617658-qp1ek0fed9pb88m5r23sotfl8o62dbp9.apps.googleusercontent.com';
+const GAUTH={g:'',email:'',nome:'',perfil:'',perm:null,exp:0};
+try{const x=JSON.parse(sessionStorage.getItem('rsc-auth')||'null');if(x?.g&&x.exp>Date.now()+60e3)Object.assign(GAUTH,x);}catch{}
+const gcan=k=>!GAUTH.perm||!!GAUTH.perm[k];
+function gisLoad(){return window.google?.accounts?Promise.resolve():new Promise((res,rej)=>{const sc=document.createElement('script');sc.src='https://accounts.google.com/gsi/client';sc.onload=res;sc.onerror=()=>rej(new Error('login do Google indisponível'));document.head.append(sc);});}
+async function gLogin(tok){const j=await tfetch(CONN.url,{method:'POST',body:JSON.stringify({g:tok,acao:'auth',app:appVer()})},30000).then(r=>r.json());if(!j?.ok)throw new Error(j?.erro||'login recusado');
+ let exp=Date.now()+50*60e3;try{exp=JSON.parse(atob(tok.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))).exp*1000;}catch{}
+ Object.assign(GAUTH,{g:tok,email:j.email,nome:j.nome,perfil:j.perfil,perm:j.perm,exp});try{sessionStorage.setItem('rsc-auth',JSON.stringify(GAUTH));}catch{}
+ IDENT={nome:j.nome,email:j.email,mat:j.mat||'',ok:true,google:true};ME=j.nome;MAT=j.mat||MAT;await saveAll();return j;}
 function campoConnect(){const c=prompt('Cole o código de conexão (computador: Estúdio de Rotas → Acompanhamentos → Sincronização com o celular → Copiar).\nDeixe em branco para desconectar.','');if(c===null)return;
  if(!c.trim()){CONN=null;saveAll();render();toast('Celular desconectado do Estúdio de Rotas.','ok');return;}
  let t=c.trim();if(/^RSC2-/.test(t)){try{const b=t.slice(5).replace(/\s+/g,'');t='RSC1|'+atob(b+'='.repeat((4-b.length%4)%4));}catch{t='';}}
@@ -765,7 +775,7 @@ function envMark(it,id){const now=new Date().toISOString(),set=x=>{x.sent=now;x.
 let FLUSHING=false;
 async function flush(now){if(!CONN||FLUSHING||!navigator.onLine||!FILA.length){renderSt();return !FILA.length;}FLUSHING=true;let ok=0,nova=false;
  try{for(const it of FILA.slice()){if(!FILA.includes(it)||(!now&&it.next&&Date.now()<it.next))continue;
-  try{const r=await tfetch(CONN.url,{method:'POST',body:JSON.stringify({t:CONN.key,nome:it.nome,dados:it.dados,cid:it.cid,app:appVer(),by:IDENT?.nome||ME||'',email:IDENT?.email||'',mat:IDENT?.mat||MAT||''})});
+  try{const r=await tfetch(CONN.url,{method:'POST',body:JSON.stringify({t:CONN.key,g:GAUTH.g||undefined,nome:it.nome,dados:it.dados,cid:it.cid,app:appVer(),by:IDENT?.nome||ME||'',email:IDENT?.email||'',mat:IDENT?.mat||MAT||''})});
    const d=await r.json().catch(()=>({ok:false,erro:'o servidor não respondeu como o Estúdio de Rotas (HTTP '+r.status+') — link antigo ou script fora do ar'}));if(!d.ok)throw new Error(d.erro||'falhou');const nf=envFotos(it.dados);if(d.nFotos!=null&&d.nFotos!==nf)throw new Error('o servidor gravou '+d.nFotos+' de '+nf+' foto(s) — o app tenta de novo');
    envMark(it,d.id);FILA=FILA.filter(x=>x!==it);ok++;await saveAll();}
   catch(e){const was=it.tries||0;it.tries=was+1;it.err=e.name==='AbortError'?'o servidor não respondeu em 90 s (internet lenta ou arquivo grande)':(e.message||'falhou');
@@ -811,15 +821,16 @@ function staleCheck(){if(!CONN||!navigator.onLine||!CONN.err||STALE||$('staleBox
 /* ---------- identificação: nome completo, e-mail e matrícula (mesma conferência do Estúdio de Rotas) ---------- */
 function identGate(force,msg){if(!force&&IDENT?.nome)return;if(!force&&AC&&AC.status==='run')return;$('identBox')?.remove();
  const d=document.createElement('div');d.id='identBox';d.className='ovl';d.setAttribute('role','dialog');d.setAttribute('aria-modal','true');d.setAttribute('aria-labelledby','idT');
- d.innerHTML=`<form class="obox" id="idF" novalidate><h2 id="idT">Quem está usando o app?</h2><p class="small mut">Os seus lançamentos e envios levam estes dados. Use os mesmos do Estúdio de Rotas no computador.</p>
+ d.innerHTML=`<form class="obox" id="idF" novalidate><h2 id="idT">Quem está usando o app?</h2><p class="small mut">Os seus lançamentos e envios levam estes dados. Use os mesmos do Estúdio de Rotas no computador.</p>${CONN&&navigator.onLine?'<div id="gBtn" style="min-height:44px;margin:4px 0 2px"></div><p class="small mut" style="margin:0 0 8px">Com o Google, nome, matrícula e perfil vêm do cadastro. Sem Google, preencha abaixo.</p>':''}
  <label><span>Nome completo</span><input id="idN" autocomplete="name" value="${esc(IDENT?.nome||ME||'')}"></label><label><span>E-mail</span><input id="idE" type="email" autocomplete="email" value="${esc(IDENT?.email||'')}"></label><label><span>Matrícula</span><input id="idM" inputmode="numeric" value="${esc(IDENT?.mat||MAT||'')}"></label>
  <p class="small" id="idErr" role="alert" style="color:var(--bad);min-height:1.2em;margin:6px 0">${esc(msg||'')}</p><button class="p" style="width:100%">Continuar</button></form>`;
  document.body.append(d);$('idN').focus();
+ if($('gBtn'))gisLoad().then(()=>{google.accounts.id.initialize({client_id:GOOGLE_CLIENT_ID,auto_select:true,callback:async r=>{$('idErr').textContent='Conferindo…';try{const j=await gLogin(r.credential);d.remove();render();staleCheck();toast('Entrou com o Google · perfil '+j.perfil+'.','ok');}catch(e){$('idErr').textContent=e.message;}}});google.accounts.id.renderButton($('gBtn'),{theme:'filled_blue',size:'large',text:'signin_with',locale:'pt-BR',width:280});}).catch(e=>{$('gBtn').textContent=e.message;});
  $('idF').onsubmit=async e=>{e.preventDefault();const nome=$('idN').value.trim().replace(/\s+/g,' '),email=$('idE').value.trim().toLowerCase(),mat=$('idM').value.trim().replace(/\s+/g,''),er=t=>{$('idErr').textContent=t;};
   if(nome.split(' ').length<2)return er('Informe o nome completo (nome e sobrenome).');if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))return er('E-mail inválido.');if(!/^[0-9A-Za-z.\-]{2,30}$/.test(mat))return er('Matrícula inválida (use só números e letras).');
-  let ok=false;if(CONN&&navigator.onLine){er('Conferindo…');try{const j=await tfetch(CONN.url,{method:'POST',body:JSON.stringify({t:CONN.key,acao:'usuario',nome,email,mat})},30000).then(r=>r.json());if(j.ok===false)return er(j.erro||'Não foi possível conferir.');ok=!!j.ok;}catch{}er('');}
+  let ok=false;if(CONN&&navigator.onLine){er('Conferindo…');try{const j=await tfetch(CONN.url,{method:'POST',body:JSON.stringify({t:CONN.key,g:GAUTH.g||undefined,acao:'usuario',nome,email,mat})},30000).then(r=>r.json());if(j.ok===false)return er(j.erro||'Não foi possível conferir.');ok=!!j.ok;}catch{}er('');}
   IDENT={nome,email,mat,ok};ME=nome;MAT=mat;await saveAll();d.remove();render();staleCheck();toast(ok?'Identificação confirmada.':'Identificação guardada — confiro quando houver conexão.','ok');};}
-async function identVerify(){if(!IDENT?.nome||IDENT.ok||!CONN||!navigator.onLine)return;try{const j=await tfetch(CONN.url,{method:'POST',body:JSON.stringify({t:CONN.key,acao:'usuario',nome:IDENT.nome,email:IDENT.email,mat:IDENT.mat})},30000).then(r=>r.json());
+async function identVerify(){if(!IDENT?.nome||IDENT.ok||!CONN||!navigator.onLine)return;try{const j=await tfetch(CONN.url,{method:'POST',body:JSON.stringify({t:CONN.key,g:GAUTH.g||undefined,acao:'usuario',nome:IDENT.nome,email:IDENT.email,mat:IDENT.mat})},30000).then(r=>r.json());
  if(j.ok){IDENT.ok=true;await saveAll();}else if(j.ok===false&&!/chave/i.test(j.erro||''))identGate(true,j.erro);}catch{}}
 function dnavSync(){const v=VIEW.v,g=['vist','route','point','form','send'].includes(v)?'vist':v;document.querySelectorAll('#dnav [data-go]').forEach(b=>b.setAttribute('aria-current',b.dataset.go===g?'page':'false'));}
 setInterval(()=>{if(CONN&&navigator.onLine){flush();envPoll();identVerify();}},30000);
