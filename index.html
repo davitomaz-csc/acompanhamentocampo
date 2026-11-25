@@ -134,7 +134,7 @@ header .stpill.ok{background:#15803d}header .stpill.wait{background:#0e7490}head
  Modo B (acompanhamento individual de carro ou ônibus). GPS contínuo, paradas com raio de tolerância, embarques/desembarques,
  fechamento com métricas e arquivo para importar no computador. Vistoria de pontos: checklist, fotos e posição pelo GPS.
  Tudo fica guardado no próprio celular até ser enviado. */
-const APP='Estúdio de Rotas Campo 2.13.3 · by Davi';
+const APP='Estúdio de Rotas Campo 2.13.4 · by Davi';
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const uid=(p='i')=>p+Date.now().toString(36).slice(-6)+Math.random().toString(36).slice(2,6);
@@ -338,15 +338,21 @@ const verTxt=x=>{const l=(x.ver||[]).slice(-1)[0];return l?'v'+l.v+' por '+(l.by
 /* vistoria que uma nova substituiria: a do sistema ou uma já enviada deste celular (rascunho não enviado é só editado) */
 function sstPrev(pk,s){const lo=resOf(s);if(lo&&!lo.sent)return null;return[lo,sysOf(pk,s)].filter(x=>x?.sst).sort((a,b)=>String(b.at).localeCompare(a.at))[0]||null;}
 const sysNote=y=>`<div class="note ${clsOf(y)[1]}"><b>🦺 Vistoria no sistema: ${clsOf(y)[0]}</b>${y.sst?.nivel?' · risco '+esc(y.sst.nivel):''}<br>${esc(verTxt(y))}</div>`;
-async function sstLineDoc(pk,r,M){const pts=r.stops.filter(s=>s.st!=='casa'),pages=[];
- for(let i=0;i<pts.length;i++){const s=pts[i],lo=resOf(s),v=[lo,sysOf(pk,s)].filter(x=>x?.sst).sort((a,b)=>String(b.at).localeCompare(a.at))[0]||null,ph=[];
+async function sstLineDoc(pk,r,M){const pts=r.stops.filter(s=>s.st!=='casa'),pages=[],bad=[];let nx=0;
+ /* 2.13.4: 4 pontos por vez (um por um travava no 4G); páginas e lista do que faltou seguem a ordem dos pontos */
+ const one=async i=>{const s=pts[i],lo=resOf(s),v=[lo,sysOf(pk,s)].filter(x=>x?.sst).sort((a,b)=>String(b.at).localeCompare(a.at))[0]||null,ph=[];
   if(v&&v===lo){for(const id of(lo.photos||[]).slice(0,5)){const d=await DB.get('ph:'+id);if(d)ph.push(d);}}
   /* 2.13.3: vistoria do sistema — busca as fotos no Drive (antes ia só a miniatura do pacote) */
   else if(v){for(let k=0;k<Math.min(5,v.np||0);k++){const x=await sysFetch(s.pid,v.id,k,v.fr?.[k]);if(x.d)ph.push(x.d);else if(k===0&&v.ph)ph.push(v.ph);}}
-  if(M&&v&&ph.length<Math.min(5,v===lo?(lo.photos||[]).length:(v.np||0)))M.push(s.code||s.name);
-  pages.push(sstPageHtml({client:r.client||'',line:r.code||r.name,name:r.name||'',dir:r.dir,n:s.n||i+1,tot:pts.length,label:s.name,code:s.code||'',lat:s.lat,lon:s.lon,v:v&&{at:v.at,by:v.by,mat:v.mat,sst:v.sst,ver:v.ver,np:v===lo?(lo.photos||[]).length:(v.np||0)},ph,logo:pk.pub?.logo||'',flogo:'',company:pk.pub?.company||''}));}
+  if(M&&v&&ph.length<Math.min(5,v===lo?(lo.photos||[]).length:(v.np||0)))bad[i]=s.code||s.name;
+  pages[i]=(sstPageHtml({client:r.client||'',line:r.code||r.name,name:r.name||'',dir:r.dir,n:s.n||i+1,tot:pts.length,label:s.name,code:s.code||'',lat:s.lat,lon:s.lon,v:v&&{at:v.at,by:v.by,mat:v.mat,sst:v.sst,ver:v.ver,np:v===lo?(lo.photos||[]).length:(v.np||0)},ph,logo:pk.pub?.logo||'',flogo:'',company:pk.pub?.company||''}));};
+ await Promise.all(Array.from({length:Math.min(4,pts.length)},async()=>{while(nx<pts.length)await one(nx++);}));
+ if(M)M.push(...bad.filter(Boolean));
  return sstDocHtml('Vistoria de segurança · '+(r.code||r.name)+' '+r.dir,pages,pk.pub?.color||'#0f3b5f',SST_FONTS);}
-async function sstRel(pkId,rid){const pk=pkgOf(pkId),r=pk&&routeOf(pk,rid);if(!r)return;const miss=[];toast('Buscando as fotos das vistorias…','',3000);const html=await sstLineDoc(pk,r,miss);if(miss.length)toast('⚠ Foto não carregada em '+miss.length+' ponto(s): '+miss.slice(0,4).join(', ')+(miss.length>4?'…':'')+'. Nesses pontos o relatório sai sem a foto — confira a internet e gere de novo.','warn',12000);constblob=new Blob([html],{type:'text/html'}),
+/* 2.13.4: trava contra toque duplo e erro visível (antes um ReferenceError parava calado depois do “Buscando as fotos…”) */
+let SST_REL=false;
+async function sstRel(pkId,rid){if(SST_REL)return;SST_REL=true;try{await sstRel1(pkId,rid);}catch(e){console.error(e);toast('⚠ Não foi possível gerar o relatório: '+(e?.message||e),'bad',9000);}finally{SST_REL=false;}}
+async function sstRel1(pkId,rid){const pk=pkgOf(pkId),r=pk&&routeOf(pk,rid);if(!r)return;const miss=[];toast('Buscando as fotos das vistorias…','',3000);const html=await sstLineDoc(pk,r,miss);if(miss.length)toast('⚠ Foto não carregada em '+miss.length+' ponto(s): '+miss.slice(0,4).join(', ')+(miss.length>4?'…':'')+'. Nesses pontos o relatório sai sem a foto — confira a internet e gere de novo.','warn',12000);const blob=new Blob([html],{type:'text/html'}),
   name=('Vistoria de seguranca - '+(r.code||r.name)+' '+r.dir).replace(/[\\/:*?"<>|]+/g,'_')+'.html',feitas=r.stops.filter(s=>s.st!=='casa'&&(resOf(s)?.sst||sysOf(pk,s))).length,tot=r.stops.filter(s=>s.st!=='casa').length;
  const v=await modal(`<h3>📄 Relatório de segurança da linha</h3><p><b>${esc(r.code||r.name)} · ${esc(r.dir)}</b> — um ponto por página: ${feitas} de ${tot} vistoriado(s); o ponto sem vistoria sai como pendência.</p><p class="small mut">Para PDF: abra e toque em 🖨 Imprimir → Salvar como PDF (A4 deitado).</p>`,[{t:'👁 Abrir / imprimir (PDF)',c:'p',v:'open'},{t:'⬇ Baixar / compartilhar arquivo',v:'dl'},{t:'Fechar',v:''}]);
  if(v==='open'){const u=URL.createObjectURL(blob);if(!window.open(u,'_blank'))toast('O navegador bloqueou a nova aba: use “Baixar / compartilhar”.','warn',7000);setTimeout(()=>URL.revokeObjectURL(u),300000);}
